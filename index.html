@@ -125,11 +125,71 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red);opacity:.7;}
 .kpi.pos::before{background:var(--green);}
 .kpi.neg::before{background:var(--red);}
-.kpi-label{font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gray-dim);font-weight:700;}
+.kpi-icon{position:absolute;top:12px;right:14px;font-size:17px;opacity:.5;}
+.kpi-label{font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gray-dim);font-weight:700;padding-right:22px;}
 .kpi-value{font-family:var(--font-display);font-size:26px;letter-spacing:.5px;margin-top:4px;color:var(--white);}
 .kpi-value.pos{color:var(--green);}
 .kpi-value.neg{color:var(--red);}
 .kpi-sub{font-size:11px;color:var(--gray-dim);margin-top:2px;}
+
+/* ---------- META HERO CARD ---------- */
+.meta-hero{
+  position:relative; overflow:hidden; border-radius:18px; padding:20px;
+  display:flex; flex-direction:column; gap:16px; margin-bottom:18px;
+  border:1px solid var(--line);
+  background:linear-gradient(135deg,var(--card2),var(--card));
+}
+.meta-hero.tier-gold{ border-color:#caa23d; background:linear-gradient(135deg,#241b06,#170f04); box-shadow:0 0 34px rgba(217,164,65,.16) inset; }
+.meta-hero.tier-hot{ border-color:var(--red-dim); background:linear-gradient(135deg,#2a0608,#170304); box-shadow:0 0 34px rgba(227,6,19,.12) inset; }
+.meta-hero.tier-cold{ border-color:var(--line2); }
+.meta-hero-top{ display:flex; align-items:center; gap:18px; }
+.meta-hero-sticker{
+  font-size:54px; flex-shrink:0; line-height:1;
+  animation:metaBounce 1.7s ease-in-out infinite;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.45));
+}
+@keyframes metaBounce{
+  0%,100%{ transform:translateY(0) scale(1) rotate(0deg); }
+  50%{ transform:translateY(-9px) scale(1.07) rotate(-3deg); }
+}
+.meta-hero-body{flex:1;min-width:0;}
+.meta-hero-label{font-size:10.5px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray-dim);font-weight:700;}
+.meta-hero-value{font-family:var(--font-display);font-size:38px;color:var(--white);line-height:1;margin-top:4px;}
+.meta-hero input[type=range]{width:100%;margin-top:12px;accent-color:var(--red);}
+.meta-hero-msg{font-size:12px;color:var(--gray);margin-top:8px;font-weight:700;}
+.meta-hero-real-badge{
+  flex-shrink:0; text-align:center; min-width:110px;
+  background:rgba(255,255,255,.045); border:1px solid var(--line2); border-radius:16px;
+  padding:14px 20px; animation:metaFloat 2.6s ease-in-out .3s infinite;
+}
+.meta-hero-real-badge.tier-gold{ border-color:rgba(217,164,65,.5); background:rgba(217,164,65,.08); }
+.meta-hero-real-badge.tier-hot{ border-color:rgba(227,6,19,.4); background:rgba(227,6,19,.07); }
+@keyframes metaFloat{
+  0%,100%{ transform:translateY(0); }
+  50%{ transform:translateY(-8px); }
+}
+.meta-hero-real-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray-dim);font-weight:700;}
+.meta-hero-real-value{font-family:var(--font-display);font-size:28px;color:var(--white);margin-top:3px;}
+.meta-hero-real-badge.tier-gold .meta-hero-real-value{color:#e8c777;}
+.meta-hero-real-badge.tier-hot .meta-hero-real-value{color:#ff6b74;}
+.meta-hero-stats{
+  display:flex; align-items:center; flex-wrap:wrap; gap:14px 18px;
+  padding-top:14px; border-top:1px dashed rgba(255,255,255,.12);
+}
+.meta-stat{ display:flex; flex-direction:column; align-items:center; min-width:64px; }
+.meta-stat-val{ font-family:var(--font-display); font-size:22px; line-height:1; }
+.meta-stat-val.green{ color:var(--green); }
+.meta-stat-val.red{ color:var(--red); }
+.meta-stat-lbl{ font-size:10px; color:var(--gray-dim); font-weight:700; margin-top:3px; white-space:nowrap; }
+.meta-stat-sep{ width:1px; align-self:stretch; background:rgba(255,255,255,.12); margin:0 2px; }
+@media(max-width:520px){
+  .meta-hero-top{flex-direction:column;align-items:flex-start;text-align:left;}
+  .meta-hero-sticker{font-size:42px;}
+  .meta-hero-value{font-size:32px;}
+  .meta-hero-real-badge{align-self:center;margin-top:4px;}
+  .meta-hero-stats{justify-content:center;}
+  .meta-stat-sep{display:none;}
+}
 
 .charts-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:18px;}
 .charts-grid.two-even{grid-template-columns:1fr 1fr;}
@@ -229,6 +289,10 @@ tbody tr:last-child td{border-bottom:none;}
 .banca-card h5{font-family:var(--font-display);font-size:18px;letter-spacing:.5px;color:var(--white);}
 .banca-card .amt{font-size:13px;color:var(--gray);margin-top:6px;}
 .banca-card .amt b{color:var(--white);float:right;}
+.banca-card .amt.pending-info{
+  color:var(--gray-dim); font-size:11.5px; margin-top:10px; padding-top:8px;
+  border-top:1px dashed var(--line2); float:none; clear:both;
+}
 .banca-card .del-banca{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--gray-dim);font-size:14px;}
 .banca-card .del-banca:hover{color:var(--red);}
 .add-banca-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
@@ -411,6 +475,7 @@ tbody tr:last-child td{border-bottom:none;}
 </style>
 </head>
 <body>
+
 <div id="lockScreen">
   <div class="lock-bg-glow"></div>
   <div class="lock-box">
@@ -462,7 +527,10 @@ tbody tr:last-child td{border-bottom:none;}
 
   <!-- =================== PRINCIPAL =================== -->
   <section class="tab-panel active" id="tab-principal">
-    <div class="section-title">Visão Geral<div class="rule"></div></div>
+    <div class="section-title">Visão Geral<div class="rule"></div>
+      <button class="btn btn-ghost btn-sm" id="btnToggleValues">👁️ Ocultar valores</button>
+    </div>
+    <div id="metaHero"></div>
     <div class="kpi-grid" id="kpiGeral"></div>
 
     <div class="charts-grid">
@@ -726,20 +794,23 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="field"><label>Casa de Aposta</label><select id="apostaCasa" required></select></div>
       </div>
       <div class="field">
-        <label>Esporte</label>
-        <div class="seg" id="segEsporte">
-          <button type="button" data-v="⚽ Futebol" class="active">⚽ Futebol</button>
-          <button type="button" data-v="🏀 Basquete">🏀 Basquete</button>
-          <button type="button" data-v="🎾 Tênis">🎾 Tênis</button>
-          <button type="button" data-v="🏒 Hóquei">🏒 Hóquei</button>
+        <label>Esporte + Tipo de Aposta (por jogo do bilhete)</label>
+        <div class="field-row">
+          <select id="legEsporte">
+            <option value="⚽ Futebol">⚽ Futebol</option>
+            <option value="🏀 Basquete">🏀 Basquete</option>
+            <option value="🎾 Tênis">🎾 Tênis</option>
+            <option value="🏒 Hóquei">🏒 Hóquei</option>
+          </select>
+          <select id="legTipo">
+            <option value="Estatística de Jogo">Estatística de Jogo</option>
+            <option value="Estatística de Jogador">Estatística de Jogador</option>
+            <option value="Estatística de Equipe Individual">Estatística de Equipe Individual</option>
+          </select>
         </div>
-      </div>
-      <div class="field">
-        <label>Tipo de Aposta</label>
-        <div class="seg" id="segTipoAposta">
-          <button type="button" data-v="Estatística de Jogo" class="active">Estatística de Jogo</button>
-          <button type="button" data-v="Estatística de Jogador">Estatística de Jogador</button>
-        </div>
+        <button type="button" class="btn btn-sm" id="btnAddLeg" style="margin-top:8px;">+ Adicionar ao bilhete</button>
+        <div class="filter-chips" id="legList" style="margin-top:10px;"></div>
+        <div class="helper-text">Bilhete com mais de um jogo? Adicione cada esporte + tipo separadamente — assim fica claro qual tipo é de qual jogo.</div>
       </div>
       <div class="field">
         <label>Origem do Valor</label>
@@ -751,7 +822,7 @@ tbody tr:last-child td{border-bottom:none;}
       </div>
       <div class="field-row">
         <div class="field"><label>Valor Apostado (R$)</label><input type="number" step="0.01" min="0" id="apostaValor" required></div>
-        <div class="field"><label>Odd do Bilhete</label><input type="number" step="0.01" min="1" id="apostaOdd" required></div>
+        <div class="field"><label>Odd do Bilhete</label><input type="number" step="0.0001" min="1" id="apostaOdd" placeholder="ex: 2.55 ou 1.5547" required></div>
       </div>
       <div class="field">
         <label>Status</label>
@@ -860,6 +931,7 @@ tbody tr:last-child td{border-bottom:none;}
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
+
 
 
 <script>
@@ -1095,6 +1167,27 @@ function fmtDate(d){
   const [y,m,day] = d.split('-');
   return `${day}/${m}/${y.slice(2)}`;
 }
+function fmtOdd(v){
+  const n = Number(v)||0;
+  const r4 = Math.round(n*10000)/10000;
+  const isWhole2 = Math.round(r4*100)/100 === r4;
+  return isWhole2 ? r4.toFixed(2) : r4.toFixed(4).replace(/0+$/,'').replace(/\.$/,'');
+}
+const MONTH_ABBR_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function monthLabel(key){
+  const star = key.endsWith('*') ? '*' : '';
+  const base = star ? key.slice(0,-1) : key;
+  const [y,m] = base.split('-');
+  const idx = parseInt(m,10)-1;
+  return (MONTH_ABBR_PT[idx]||m)+'/'+y.slice(2)+star;
+}
+const WEEKDAY_ABBR_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function fmtDateWeekdayArr(d){
+  if(!d) return ['—'];
+  const [y,m,day] = d.split('-');
+  const dt = new Date(Number(y), Number(m)-1, Number(day));
+  return [`${day}/${m}/${y.slice(2)}`, WEEKDAY_ABBR_PT[dt.getDay()]];
+}
 
 /* ============================================================
    DATE BUCKETING (diária / semanal / mensal)
@@ -1157,7 +1250,7 @@ function buildEvolSeries(initial, events){
     map[e.data] = running;
     if(!order.includes(e.data)) order.push(e.data);
   });
-  return { labels:['Início', ...order.map(fmtDate)], data:[round2(initial), ...order.map(d=>round2(map[d]))] };
+  return { labels:['Início', ...order.map(fmtDateWeekdayArr)], data:[round2(initial), ...order.map(d=>round2(map[d]))] };
 }
 
 /* ============================================================
@@ -1225,7 +1318,7 @@ function renderEvolChart(canvasId, initial, events, color){
           formatter:(v)=>fmtFull(v) }
       },
       scales:{
-        x:{ grid:baseGrid(), ticks:{ font:{weight:'600', size:10}, maxRotation:40, autoSkip:true, autoSkipPadding:14 } },
+        x:{ grid:baseGrid(), ticks:{ font:{weight:'600', size:10}, maxRotation:0, minRotation:0, autoSkip:true, autoSkipPadding:10 } },
         y:{ display:false }
       }
     }
@@ -1264,7 +1357,7 @@ function renderTAMonthlyChart(canvasId, entries, kind, metaValue){
   const currentMonthKey = localDateStr(new Date()).slice(0,7);
   const colors = s.data.map(v=> v===null ? 'rgba(255,255,255,.12)' : (v>=metaValue ? COLOR_GREEN_SOFT : COLOR_RED_SOFT));
   const borders = s.data.map(v=> v===null ? '#555' : (v>=metaValue ? COLOR_GREEN : COLOR_RED));
-  const labels = s.labels.map(l=> l===currentMonthKey ? l+'*' : l);
+  const labels = s.labels.map(l=> monthLabel(l===currentMonthKey ? l+'*' : l));
   upsertChart(canvasId, {
     type:'bar',
     data:{ labels: labels.length?labels:['Sem dados'], datasets:[
@@ -1337,11 +1430,11 @@ function filteredApostas(){
   return DB.apostas.filter(a=>{
     if(f.dataIni && a.data < f.dataIni) return false;
     if(f.dataFim && a.data > f.dataFim) return false;
-    if(f.esporte.length && !f.esporte.includes(a.esporte)) return false;
+    if(f.esporte.length && !getLegs(a).some(l=>f.esporte.includes(l.esporte))) return false;
     if(f.casa.length && !f.casa.includes(a.casaId)) return false;
     if(f.status.length && !f.status.includes(a.status)) return false;
     if(f.valorTipo.length && !f.valorTipo.includes(a.valorTipo)) return false;
-    if(f.tipoAposta.length && !f.tipoAposta.includes(a.tipo)) return false;
+    if(f.tipoAposta.length && !getLegs(a).some(l=>f.tipoAposta.includes(l.tipo))) return false;
     return true;
   });
 }
@@ -1368,12 +1461,14 @@ function renderFilterPanel(containerId, kind){
       <div class="filter-field"><label>De</label><input type="date" id="fEspDataIni" value="${filters.esportiva.dataIni}"></div>
       <div class="filter-field"><label>Até</label><input type="date" id="fEspDataFim" value="${filters.esportiva.dataFim}"></div>
       <div class="filter-field"><label>Esporte</label><select multiple id="fEspEsporte"></select></div>
+      <div class="filter-field"><label>Tipo de Aposta</label><select multiple id="fEspTipoAposta"></select></div>
       <div class="filter-field"><label>Casa</label><select multiple id="fEspCasa"></select></div>
       <div class="filter-field"><label>Status</label><select multiple id="fEspStatus"></select></div>
       <div class="filter-field"><label>Origem</label><select multiple id="fEspValorTipo"></select></div>
       <div class="filter-actions"><button class="btn btn-sm" id="fEspLimpar">Limpar filtros</button></div>
     `;
     buildMultiOptions(document.getElementById('fEspEsporte'), ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei'].map(v=>({value:v,label:v})), filters.esportiva.esporte);
+    buildMultiOptions(document.getElementById('fEspTipoAposta'), ['Estatística de Jogo','Estatística de Jogador','Estatística de Equipe Individual'].map(v=>({value:v,label:v})), filters.esportiva.tipoAposta);
     buildMultiOptions(document.getElementById('fEspCasa'), DB.casas.map(c=>({value:c.id,label:c.nome})), filters.esportiva.casa);
     buildMultiOptions(document.getElementById('fEspStatus'), ['Green','Red','Reembolso','Pendente'].map(v=>({value:v,label:v})), filters.esportiva.status);
     buildMultiOptions(document.getElementById('fEspValorTipo'), ['Saldo da Banca','Créditos Grátis'].map(v=>({value:v,label:v})), filters.esportiva.valorTipo);
@@ -1384,7 +1479,7 @@ function renderFilterPanel(containerId, kind){
     });
     document.getElementById('fEspDataIni').addEventListener('change', e=>{ filters.esportiva.dataIni=e.target.value; renderAll(); });
     document.getElementById('fEspDataFim').addEventListener('change', e=>{ filters.esportiva.dataFim=e.target.value; renderAll(); });
-    bind('fEspEsporte','esporte'); bind('fEspCasa','casa'); bind('fEspStatus','status'); bind('fEspValorTipo','valorTipo');
+    bind('fEspEsporte','esporte'); bind('fEspTipoAposta','tipoAposta'); bind('fEspCasa','casa'); bind('fEspStatus','status'); bind('fEspValorTipo','valorTipo');
     document.getElementById('fEspLimpar').addEventListener('click', ()=>{
       filters.esportiva = { dataIni:'', dataFim:'', esporte:[], casa:[], status:[], valorTipo:[], tipoAposta:[] };
       renderAll();
@@ -1420,7 +1515,7 @@ function renderFilterPanel(containerId, kind){
 ============================================================ */
 const COLUMN_DEFS = {
   apostas: [
-    {key:'data', label:'Data'}, {key:'esporte', label:'Esporte'}, {key:'tipo', label:'Tipo de Aposta'},
+    {key:'data', label:'Data'}, {key:'esporteTipo', label:'Esporte / Tipo'},
     {key:'casa', label:'Casa'}, {key:'valorTipo', label:'Origem'}, {key:'valor', label:'Valor'},
     {key:'odd', label:'Odd'}, {key:'status', label:'Status'}, {key:'lucro', label:'Lucro'}
   ],
@@ -1473,8 +1568,8 @@ function renderTableApostas(){
     const casa = casaById(a.casaId);
     const lucro = profitAposta(a);
     const cellMap = {
-      data: fmtDate(a.data), esporte: a.esporte, tipo: a.tipo, casa: casa?casa.nome:'—',
-      valorTipo: a.valorTipo, valor: fmtBRL(a.valor), odd: Number(a.odd).toFixed(2),
+      data: fmtDate(a.data), esporteTipo: getLegs(a).map(l=>`${l.esporte} — ${l.tipo}`).join('<br>'), casa: casa?casa.nome:'—',
+      valorTipo: a.valorTipo, valor: fmtBRL(a.valor), odd: fmtOdd(a.odd),
       status: statusBadge(a.status), lucro: lucroSpan(lucro)
     };
     return `<tr>${cols.map(c=>`<td>${cellMap[c.key]}</td>`).join('')}
@@ -1561,8 +1656,55 @@ function renderTableMovimentacoes(){
 /* ============================================================
    KPI RENDERERS
 ============================================================ */
-function kpiCard(label, value, sub, cls){
-  return `<div class="kpi ${cls||''}"><div class="kpi-label">${label}</div><div class="kpi-value ${cls||''}">${value}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
+function kpiCard(label, value, sub, cls, icon){
+  return `<div class="kpi ${cls||''}">${icon?`<div class="kpi-icon">${icon}</div>`:''}<div class="kpi-label">${label}</div><div class="kpi-value ${cls||''}">${value}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
+}
+
+let valuesHidden = localStorage.getItem('odias_hide_values')==='1';
+function maskMoney(str){ return valuesHidden ? '••••••' : str; }
+
+function computeTAGeral(){
+  const apostas = DB.apostas, bins = DB.binarias;
+  const gWin = apostas.filter(a=>a.status==='Green').length + bins.filter(b=>b.status==='GAIN').length;
+  const gLoss = apostas.filter(a=>a.status==='Red').length + bins.filter(b=>b.status==='LOSS').length;
+  return taFrom({win:gWin, loss:gLoss});
+}
+
+function renderMetaHero(){
+  const ta = computeTAGeral();
+  const diff = ta - DB.metaTA;
+  let tier, sticker, msg;
+  if(diff>=0){ tier='gold'; sticker='🏆'; msg='Meta batida! Mandou bem.'; }
+  else if(diff>=-10){ tier='hot'; sticker='🔥'; msg='Quase lá, continue assim!'; }
+  else { tier='cold'; sticker='💪'; msg='Foco total pra virar o jogo.'; }
+  const greenEsp = DB.apostas.filter(a=>a.status==='Green').length;
+  const redEsp = DB.apostas.filter(a=>a.status==='Red').length;
+  const gainOB = DB.binarias.filter(b=>b.status==='GAIN').length;
+  const lossOB = DB.binarias.filter(b=>b.status==='LOSS').length;
+  document.getElementById('metaHero').innerHTML = `
+    <div class="meta-hero tier-${tier}">
+      <div class="meta-hero-top">
+        <div class="meta-hero-sticker">${sticker}</div>
+        <div class="meta-hero-body">
+          <div class="meta-hero-label">Meta de Taxa de Acerto</div>
+          <div class="meta-hero-value"><span id="metaTADisplay">${DB.metaTA}</span>%</div>
+          <input type="range" min="0" max="100" id="metaTAInput" value="${DB.metaTA}">
+          <div class="meta-hero-msg">${msg}</div>
+        </div>
+        <div class="meta-hero-real-badge tier-${tier}">
+          <div class="meta-hero-real-label">TA Real</div>
+          <div class="meta-hero-real-value">${ta.toFixed(1)}%</div>
+        </div>
+      </div>
+      <div class="meta-hero-stats">
+        <div class="meta-stat"><span class="meta-stat-val green">${greenEsp}</span><span class="meta-stat-lbl">✅ Green</span></div>
+        <div class="meta-stat"><span class="meta-stat-val red">${redEsp}</span><span class="meta-stat-lbl">❌ Red</span></div>
+        <div class="meta-stat-sep"></div>
+        <div class="meta-stat"><span class="meta-stat-val green">${gainOB}</span><span class="meta-stat-lbl">✅ Gain (OB)</span></div>
+        <div class="meta-stat"><span class="meta-stat-val red">${lossOB}</span><span class="meta-stat-lbl">❌ Loss (OB)</span></div>
+      </div>
+    </div>
+  `;
 }
 
 function renderKPIGeral(){
@@ -1572,22 +1714,12 @@ function renderKPIGeral(){
   const lucro = round2(atual-inicial);
   const roi = inicial>0 ? round2(lucro/inicial*100) : 0;
   const apostas = DB.apostas, bins = DB.binarias;
-  const gWin = apostas.filter(a=>a.status==='Green').length + bins.filter(b=>b.status==='GAIN').length;
-  const gLoss = apostas.filter(a=>a.status==='Red').length + bins.filter(b=>b.status==='LOSS').length;
-  const ta = taFrom({win:gWin, loss:gLoss});
-  const atingiu = ta>=DB.metaTA;
-  const metaCard = `<div class="kpi meta-kpi" style="border:1px solid ${atingiu?'var(--green-dim)':'var(--red-dim)'};">
-    <div class="kpi-label">Meta de Taxa de Acerto</div>
-    <div class="kpi-value"><span id="metaTADisplay">${DB.metaTA}</span>%</div>
-    <input type="range" min="0" max="100" id="metaTAInput" value="${DB.metaTA}" style="width:100%;accent-color:var(--red);margin-top:6px;">
-    <div class="kpi-sub">TA Real: <b style="color:${atingiu?'var(--green)':'var(--red)'}">${ta.toFixed(1)}%</b> &middot; ${atingiu?'✅ Meta atingida':'⚠️ Abaixo da meta'}</div>
-  </div>`;
-  document.getElementById('kpiGeral').innerHTML = metaCard + [
-    kpiCard('Banca Inicial (Geral)', fmtBRL(inicial)),
-    kpiCard('Banca Atual (Geral)', fmtBRL(atual)),
-    kpiCard('Lucro / Prejuízo', fmtBRL(lucro), null, lucro>=0?'pos':'neg'),
-    kpiCard('ROI Geral', roi.toFixed(1)+'%', null, roi>=0?'pos':'neg'),
-    kpiCard('Total de Registros', apostas.length+bins.length, apostas.length+' esportivas · '+bins.length+' OB')
+  document.getElementById('kpiGeral').innerHTML = [
+    kpiCard('Banca Inicial (Geral)', maskMoney(fmtBRL(inicial)), null, '', '🏦'),
+    kpiCard('Banca Atual (Geral)', maskMoney(fmtBRL(atual)), null, '', '💰'),
+    kpiCard('Lucro / Prejuízo', maskMoney(fmtBRL(lucro)), null, lucro>=0?'pos':'neg', lucro>=0?'📈':'📉'),
+    kpiCard('ROI Geral', roi.toFixed(1)+'%', null, roi>=0?'pos':'neg', '📊'),
+    kpiCard('Total de Registros', apostas.length+bins.length, apostas.length+' esportivas · '+bins.length+' OB', '', '🧾')
   ].join('');
 }
 
@@ -1683,24 +1815,41 @@ function resumoPlataformas(){
 function resumoEsporte(){
   const grupos = {};
   DB.apostas.forEach(a=>{
-    grupos[a.esporte] = grupos[a.esporte] || [];
-    grupos[a.esporte].push(a);
+    const esportesUnicos = [...new Set(getLegs(a).map(l=>l.esporte))];
+    const share = round2(profitAposta(a) / (esportesUnicos.length||1));
+    esportesUnicos.forEach(esp=>{
+      const g = grupos[esp] = grupos[esp] || {apostas:0, green:0, red:0, push:0, pending:0, lucro:0};
+      g.apostas++; g.lucro = round2(g.lucro + share);
+      if(a.status==='Green') g.green++;
+      else if(a.status==='Red') g.red++;
+      else if(a.status==='Reembolso') g.push++;
+      else if(a.status==='Pendente') g.pending++;
+    });
   });
   return Object.keys(grupos).map(esp=>{
-    const list = grupos[esp]; const counts = apostaCounts(list);
-    const ta = taFrom({win:counts.win, loss:counts.loss});
-    const lucro = round2(list.reduce((s,a)=>s+profitAposta(a),0));
-    return { nome:esp, apostas:list.length, green:counts.win, red:counts.loss, push:counts.push, pending:counts.pending, ta, lucro };
+    const g = grupos[esp];
+    const ta = taFrom({win:g.green, loss:g.red});
+    return { nome:esp, apostas:g.apostas, green:g.green, red:g.red, push:g.push, pending:g.pending, ta, lucro:g.lucro };
   });
 }
 function resumoTipoAposta(){
   const grupos = {};
-  DB.apostas.forEach(a=>{ grupos[a.tipo] = grupos[a.tipo] || []; grupos[a.tipo].push(a); });
+  DB.apostas.forEach(a=>{
+    const tiposUnicos = [...new Set(getLegs(a).map(l=>l.tipo))];
+    const share = round2(profitAposta(a) / (tiposUnicos.length||1));
+    tiposUnicos.forEach(tp=>{
+      const g = grupos[tp] = grupos[tp] || {apostas:0, green:0, red:0, push:0, pending:0, lucro:0};
+      g.apostas++; g.lucro = round2(g.lucro + share);
+      if(a.status==='Green') g.green++;
+      else if(a.status==='Red') g.red++;
+      else if(a.status==='Reembolso') g.push++;
+      else if(a.status==='Pendente') g.pending++;
+    });
+  });
   return Object.keys(grupos).map(tp=>{
-    const list = grupos[tp]; const counts = apostaCounts(list);
-    const ta = taFrom({win:counts.win, loss:counts.loss});
-    const lucro = round2(list.reduce((s,a)=>s+profitAposta(a),0));
-    return { nome:tp, apostas:list.length, green:counts.win, red:counts.loss, push:counts.push, pending:counts.pending, ta, lucro };
+    const g = grupos[tp];
+    const ta = taFrom({win:g.green, loss:g.red});
+    return { nome:tp, apostas:g.apostas, green:g.green, red:g.red, push:g.push, pending:g.pending, ta, lucro:g.lucro };
   });
 }
 function resumoCallPut(){
@@ -1928,6 +2077,7 @@ function buildPrintReport(images){
    FULL RENDER
 ============================================================ */
 function renderAll(){
+  renderMetaHero();
   renderKPIGeral();
   renderKPIEsportiva();
   renderKPIOB();
@@ -1977,10 +2127,10 @@ function renderAll(){
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
   const bySport = {};
-  listEsp.forEach(a=>{ bySport[a.esporte]=(bySport[a.esporte]||0)+profitAposta(a); });
+  listEsp.forEach(a=>{ const es=[...new Set(getLegs(a).map(l=>l.esporte))]; const share=profitAposta(a)/(es.length||1); es.forEach(esp=>{ bySport[esp]=(bySport[esp]||0)+share; }); });
   renderBarProfit('chartEsporte', Object.keys(bySport), Object.values(bySport));
   const byTipoAposta = {};
-  listEsp.forEach(a=>{ byTipoAposta[a.tipo]=(byTipoAposta[a.tipo]||0)+profitAposta(a); });
+  listEsp.forEach(a=>{ const ts=[...new Set(getLegs(a).map(l=>l.tipo))]; const share=profitAposta(a)/(ts.length||1); ts.forEach(tp=>{ byTipoAposta[tp]=(byTipoAposta[tp]||0)+share; }); });
   renderBarProfit('chartTipoAposta', Object.keys(byTipoAposta), Object.values(byTipoAposta));
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
@@ -2005,6 +2155,13 @@ function renderAll(){
 /* ============================================================
    BANCAS UI (config tab)
 ============================================================ */
+function pendingApostasInfo(casaId){
+  const list = DB.apostas.filter(a=>a.casaId===casaId && a.status==='Pendente');
+  if(list.length===0) return '';
+  const total = round2(list.reduce((s,a)=>s+Number(a.valor||0),0));
+  const plural = list.length>1 ? 's' : '';
+  return `<div class="amt pending-info">⏳ ${list.length} aposta${plural} pendente${plural} de ${fmtBRL(total)}</div>`;
+}
 function renderBancasUI(){
   const gridCasas = document.getElementById('gridCasas');
   gridCasas.innerHTML = DB.casas.length ? DB.casas.map(c=>{
@@ -2015,6 +2172,7 @@ function renderBancasUI(){
       <h5>${c.nome}</h5>
       <div class="amt">Inicial <b>${fmtBRL(c.bancaInicial)}</b></div>
       <div class="amt">Atual <b style="color:${atual>=c.bancaInicial?'var(--green)':'var(--red)'}">${fmtBRL(atual)}</b></div>
+      ${pendingApostasInfo(c.id)}
     </div>`;
   }).join('') : `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🏦</div>Nenhuma casa de aposta cadastrada.</div>`;
 
@@ -2051,13 +2209,19 @@ function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 window.closeModal = closeModal;
 
-function segBind(containerId, onChange){
+function segBind(containerId, onChange, multi){
   const el = document.getElementById(containerId);
   el.querySelectorAll('button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      el.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      if(onChange) onChange(btn.dataset.v);
+      if(multi){
+        // don't allow deselecting the last remaining active option
+        if(btn.classList.contains('active') && el.querySelectorAll('button.active').length===1) return;
+        btn.classList.toggle('active');
+      } else {
+        el.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      if(onChange) onChange(multi ? segValues(containerId) : btn.dataset.v);
     });
   });
 }
@@ -2065,12 +2229,38 @@ function segValue(containerId){
   const active = document.querySelector('#'+containerId+' button.active');
   return active ? active.dataset.v : null;
 }
+function segValues(containerId){
+  return Array.from(document.querySelectorAll('#'+containerId+' button.active')).map(b=>b.dataset.v);
+}
 function segSet(containerId, value){
   const el = document.getElementById(containerId);
-  el.querySelectorAll('button').forEach(b=> b.classList.toggle('active', b.dataset.v===value));
+  if(Array.isArray(value)){
+    el.querySelectorAll('button').forEach(b=> b.classList.toggle('active', value.includes(b.dataset.v)));
+  } else {
+    el.querySelectorAll('button').forEach(b=> b.classList.toggle('active', b.dataset.v===value));
+  }
+}
+function arrify(v){
+  if(Array.isArray(v)) return v;
+  return v ? [v] : [];
+}
+// Retorna as "pernas" (pares esporte+tipo) de uma aposta, com compatibilidade
+// com registros antigos que só tinham arrays soltos de esporte/tipo.
+function getLegs(a){
+  if(Array.isArray(a.legs) && a.legs.length) return a.legs;
+  const esportes = arrify(a.esporte);
+  const tipos = arrify(a.tipo);
+  if(esportes.length===0 && tipos.length===0) return [];
+  if(esportes.length===tipos.length){
+    return esportes.map((e,i)=>({esporte:e, tipo:tipos[i]}));
+  }
+  const legs=[];
+  (esportes.length?esportes:['—']).forEach(e=>{
+    (tipos.length?tipos:['—']).forEach(t=>{ legs.push({esporte:e, tipo:t}); });
+  });
+  return legs;
 }
 
-segBind('segEsporte'); segBind('segTipoAposta');
 segBind('segValorTipo', (v)=>{ document.getElementById('creditoHelper').style.display = v==='Créditos Grátis' ? 'block':'none'; });
 segBind('segStatusAposta');
 segBind('segTipoOB'); segBind('segStatusOB');
@@ -2078,12 +2268,36 @@ segBind('segTipoBonus');
 segBind('segTipoMov');
 
 /* ---------- APOSTA ---------- */
+let currentLegs = [];
+function renderLegList(){
+  const el = document.getElementById('legList');
+  if(currentLegs.length===0){
+    el.innerHTML = `<span class="helper-text">Nenhum jogo adicionado ainda.</span>`;
+    return;
+  }
+  el.innerHTML = currentLegs.map((l,i)=>`<span class="chip">${l.esporte} — ${l.tipo}<button type="button" data-i="${i}" class="legRemove">✕</button></span>`).join('');
+  el.querySelectorAll('.legRemove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentLegs.splice(parseInt(btn.dataset.i,10), 1);
+      renderLegList();
+    });
+  });
+}
+document.getElementById('btnAddLeg').addEventListener('click', ()=>{
+  const esporte = document.getElementById('legEsporte').value;
+  const tipo = document.getElementById('legTipo').value;
+  if(currentLegs.some(l=>l.esporte===esporte && l.tipo===tipo)){ toast('Essa combinação já foi adicionada.'); return; }
+  currentLegs.push({esporte, tipo});
+  renderLegList();
+});
+
 function resetFormAposta(){
   document.getElementById('apostaId').value='';
   document.getElementById('apostaData').value = todayStr();
   document.getElementById('apostaValor').value='';
   document.getElementById('apostaOdd').value='';
-  segSet('segEsporte','⚽ Futebol'); segSet('segTipoAposta','Estatística de Jogo');
+  currentLegs = [{esporte:'⚽ Futebol', tipo:'Estatística de Jogo'}];
+  renderLegList();
   segSet('segValorTipo','Saldo da Banca'); document.getElementById('creditoHelper').style.display='none';
   segSet('segStatusAposta','Green');
 }
@@ -2098,7 +2312,8 @@ function openApostaModal(id){
     document.getElementById('apostaCasa').value = a.casaId;
     document.getElementById('apostaValor').value = a.valor;
     document.getElementById('apostaOdd').value = a.odd;
-    segSet('segEsporte', a.esporte); segSet('segTipoAposta', a.tipo);
+    currentLegs = getLegs(a).map(l=>({...l}));
+    renderLegList();
     segSet('segValorTipo', a.valorTipo);
     document.getElementById('creditoHelper').style.display = a.valorTipo==='Créditos Grátis'?'block':'none';
     segSet('segStatusAposta', a.status);
@@ -2107,13 +2322,15 @@ function openApostaModal(id){
 }
 document.getElementById('formAposta').addEventListener('submit', e=>{
   e.preventDefault();
+  if(currentLegs.length===0){ toast('Adicione ao menos um esporte + tipo de aposta ao bilhete.'); return; }
   const id = document.getElementById('apostaId').value;
   const rec = {
     id: id || uid(),
     data: document.getElementById('apostaData').value,
     casaId: document.getElementById('apostaCasa').value,
-    esporte: segValue('segEsporte'),
-    tipo: segValue('segTipoAposta'),
+    legs: currentLegs.map(l=>({...l})),
+    esporte: currentLegs.map(l=>l.esporte),
+    tipo: currentLegs.map(l=>l.tipo),
     valorTipo: segValue('segValorTipo'),
     valor: parseFloat(document.getElementById('apostaValor').value)||0,
     odd: parseFloat(document.getElementById('apostaOdd').value)||1,
@@ -2353,18 +2570,26 @@ document.getElementById('btnAddPlat').addEventListener('click', ()=>{
   renderAll(); toast('Plataforma adicionada.');
 });
 
-// Meta TA slider lives inside the dynamically-rendered KPI card — use delegation.
-document.getElementById('kpiGeral').addEventListener('input', e=>{
+// Meta TA slider lives inside the dynamically-rendered hero card — use delegation.
+document.getElementById('metaHero').addEventListener('input', e=>{
   if(e.target.id==='metaTAInput'){
     const disp = document.getElementById('metaTADisplay');
     if(disp) disp.textContent = e.target.value;
   }
 });
-document.getElementById('kpiGeral').addEventListener('change', e=>{
+document.getElementById('metaHero').addEventListener('change', e=>{
   if(e.target.id==='metaTAInput'){
     DB.metaTA = Math.max(0, Math.min(100, parseInt(e.target.value,10)||0));
     saveDB(); renderAll();
   }
+});
+
+document.getElementById('btnToggleValues').textContent = valuesHidden ? '🙈 Exibir valores' : '👁️ Ocultar valores';
+document.getElementById('btnToggleValues').addEventListener('click', ()=>{
+  valuesHidden = !valuesHidden;
+  localStorage.setItem('odias_hide_values', valuesHidden?'1':'0');
+  document.getElementById('btnToggleValues').textContent = valuesHidden ? '🙈 Exibir valores' : '👁️ Ocultar valores';
+  renderKPIGeral();
 });
 
 document.getElementById('btnToggleDanger').addEventListener('click', ()=>{
