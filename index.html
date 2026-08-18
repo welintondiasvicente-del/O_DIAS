@@ -346,15 +346,6 @@ tbody tr:last-child td{border-bottom:none;}
 .seg button.active.gain{background:var(--green);border-color:var(--green);}
 .seg button.opt.call{border-color:var(--green-dim);}
 .seg button.opt.call.active{background:var(--green);border-color:var(--green);}
-.chip.leg-red-toggle{cursor:pointer;user-select:none;}
-.chip.leg-red-toggle.marked{background:rgba(227,6,19,.18);border-color:var(--red-dim);color:#ff5b64;}
-.select-with-actions{display:flex;gap:6px;align-items:stretch;}
-.select-with-actions select{flex:1;min-width:0;}
-.select-with-actions button{flex-shrink:0;padding:0 12px;font-weight:700;}
-#linkGerenciarMercados{color:var(--red);text-decoration:underline;cursor:pointer;}
-.chip.leg-chip{padding:6px 6px 6px 12px;align-items:center;}
-.chip.leg-chip .legEdit{cursor:pointer;line-height:1.35;padding:2px 0;}
-.chip.leg-chip.editing{background:rgba(227,6,19,.15);border-color:var(--red-dim);}
 .modal-actions{display:flex;gap:10px;margin-top:18px;}
 .modal-actions .btn{flex:1;justify-content:center;}
 .helper-text{font-size:11px;color:var(--gray-dim);margin-top:4px;line-height:1.4;}
@@ -617,13 +608,13 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="helper-text">* mês em andamento (ainda não fechado)</div>
       </div>
       <div class="chart-card">
-        <h4>Green x Red por Esporte</h4>
+        <h4>Lucro por Esporte</h4>
         <div class="chart-wrap"><canvas id="chartEsporte"></canvas></div>
       </div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Green x Red por Tipo de Aposta</h4>
+        <h4>Lucro por Tipo de Aposta</h4>
         <div class="chart-wrap"><canvas id="chartTipoAposta"></canvas></div>
       </div>
       <div class="chart-card">
@@ -633,17 +624,17 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Green x Red por Mercado Geral</h4>
+        <h4>Lucro por Mercado Geral</h4>
         <div class="chart-wrap"><canvas id="chartMercadoGeral"></canvas></div>
       </div>
       <div class="chart-card">
-        <h4>Green x Red por Mercado da Aposta</h4>
+        <h4>Lucro por Mercado da Aposta</h4>
         <div class="chart-wrap"><canvas id="chartMercadoAposta"></canvas></div>
       </div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Green x Red por Momento (Pré-live/Live)</h4>
+        <h4>Lucro por Momento (Pré-live/Live)</h4>
         <div class="chart-wrap"><canvas id="chartMomento"></canvas></div>
       </div>
       <div class="chart-card">
@@ -763,7 +754,7 @@ tbody tr:last-child td{border-bottom:none;}
       </div>
     </div>
 
-    <div class="section-title" id="secaoMercados">Mercados (Geral e da Aposta)<div class="rule"></div></div>
+    <div class="section-title">Mercados (Geral e da Aposta)<div class="rule"></div></div>
     <div class="card" style="margin-bottom:14px;">
       <div class="section-title small" style="margin-top:0;">Mercado Geral</div>
       <div class="banca-grid" id="gridMercadosGerais" style="margin-bottom:14px;"></div>
@@ -881,37 +872,32 @@ tbody tr:last-child td{border-bottom:none;}
             <option value="Estatística de Equipe Individual">Estatística de Equipe Individual</option>
           </select>
         </div>
-        <div class="field" style="margin-top:10px;">
-          <label>Momento desta seleção</label>
-          <div class="seg" id="segMomento">
-            <button type="button" data-v="Pré-live" class="active">Pré-live</button>
-            <button type="button" data-v="Live">Live</button>
-          </div>
+        <div class="field-row" style="margin-top:8px;">
+          <input type="text" id="legCampeonato" placeholder="Campeonato (ex: Brasileirão Série A)">
+          <input type="text" id="legPartida" placeholder="Partida (ex: Flamengo x Vasco)">
         </div>
-        <div class="field-row" style="margin-top:10px;">
-          <div class="field">
-            <label>Mercado Geral</label>
-            <div class="select-with-actions">
-              <select id="apostaMercadoGeral"><option value="">— Nenhum —</option></select>
-              <button type="button" class="btn btn-sm" id="btnQuickAddMercadoGeral" title="Adicionar novo mercado geral">+</button>
-            </div>
-          </div>
-          <div class="field">
-            <label>Mercado da Aposta</label>
-            <div class="select-with-actions">
-              <select id="apostaMercadoAposta"><option value="">— Nenhum —</option></select>
-              <button type="button" class="btn btn-sm" id="btnQuickAddMercadoAposta" title="Adicionar novo mercado da aposta">+</button>
-            </div>
-          </div>
-        </div>
-        <div class="helper-text" style="margin:4px 0 10px;">Não achou o mercado? Use o <b>+</b> para adicionar na hora, ou <a href="javascript:void(0)" id="linkGerenciarMercados">gerencie / edite / remova aqui</a>.</div>
-        <div class="field-row" id="legFormActions" style="align-items:center;">
-          <button type="button" class="btn btn-sm" id="btnAddLeg" style="margin-top:0;">+ Adicionar ao bilhete</button>
-          <button type="button" class="btn btn-sm btn-ghost" id="btnCancelEditLeg" style="margin-top:0;display:none;">Cancelar edição</button>
-        </div>
+        <button type="button" class="btn btn-sm" id="btnAddLeg" style="margin-top:8px;">+ Adicionar ao bilhete</button>
         <div class="filter-chips" id="legList" style="margin-top:10px;"></div>
-        <div class="helper-text">Bilhete com mais de um jogo? Adicione cada esporte + tipo separadamente — cada um com seu próprio momento e mercado. Toque em uma seleção já adicionada para <b>editar</b> (corrigir ou preencher o que faltou).</div>
+        <div class="helper-text">Bilhete com mais de um jogo? Adicione cada esporte + tipo (com campeonato/partida) separadamente — assim fica claro qual tipo é de qual jogo. Campeonato e partida são opcionais.</div>
       </div>
+      <div class="field">
+        <label>Momento da Aposta</label>
+        <div class="seg" id="segMomento">
+          <button type="button" data-v="Pré-live" class="active">Pré-live</button>
+          <button type="button" data-v="Live">Live</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Mercado Geral</label>
+          <select id="apostaMercadoGeral"><option value="">— Nenhum —</option></select>
+        </div>
+        <div class="field">
+          <label>Mercado da Aposta</label>
+          <select id="apostaMercadoAposta"><option value="">— Nenhum —</option></select>
+        </div>
+      </div>
+      <div class="helper-text" style="margin:-8px 0 4px;">Gerencie as opções de mercado na aba <b>Bancas</b>.</div>
       <div class="field">
         <label>Bilhete</label>
         <div class="seg" id="segBilhete">
@@ -941,11 +927,6 @@ tbody tr:last-child td{border-bottom:none;}
           <button type="button" data-v="Reembolso">Reembolso</button>
           <button type="button" data-v="Pendente">Pendente</button>
         </div>
-      </div>
-      <div class="field" id="fieldLegResult" style="display:none;">
-        <label>Qual mercado do bilhete deu Red?</label>
-        <div class="filter-chips" id="legResultList"></div>
-        <div class="helper-text">Marque a(s) perna(s) do bilhete que perderam. As demais serão consideradas Green nos gráficos.</div>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('modalAposta')">Cancelar</button>
@@ -1253,55 +1234,6 @@ function apostaCounts(list){
     total: list.length
   };
 }
-// Resultado (Green/Red) de UMA PERNA específica do bilhete, de forma independente
-// do resultado geral do bilhete:
-// - Bilhete Green -> todas as pernas contam como Green.
-// - Bilhete Red com 1 perna só -> essa perna é Red.
-// - Bilhete Red com 2+ pernas -> só conta Red a(s) perna(s) marcada(s) no
-//   campo "Qual mercado do bilhete deu Red?"; as não marcadas contam Green.
-// - Reembolso/Pendente -> não entra na contagem (retorna null).
-function legOutcome(a, leg){
-  if(a.status==='Green') return 'Green';
-  if(a.status==='Red'){
-    const legs = getLegs(a);
-    if(legs.length<=1) return 'Red';
-    return leg.red ? 'Red' : 'Green';
-  }
-  return null;
-}
-// Resultado (Green/Red) do bilhete como um todo, para gráficos cujo campo
-// (mercado geral, mercado da aposta, momento) é único por registro e não por perna.
-function betOutcome(a){
-  if(a.status==='Green') return 'Green';
-  if(a.status==='Red') return 'Red';
-  return null;
-}
-// Acumula contagem {green,red} por chave, considerando cada perna individualmente.
-function tallyByLeg(list, keyFn){
-  const map = {};
-  list.forEach(a=>{
-    getLegs(a).forEach(l=>{
-      const outcome = legOutcome(a,l);
-      if(!outcome) return;
-      const key = keyFn(l) || 'Não informado';
-      if(!map[key]) map[key] = {green:0, red:0};
-      map[key][outcome==='Green'?'green':'red']++;
-    });
-  });
-  return map;
-}
-// Acumula contagem {green,red} por chave, considerando o registro (bilhete) inteiro.
-function tallyByBet(list, keyFn){
-  const map = {};
-  list.forEach(a=>{
-    const outcome = betOutcome(a);
-    if(!outcome) return;
-    const key = keyFn(a) || 'Não informado';
-    if(!map[key]) map[key] = {green:0, red:0};
-    map[key][outcome==='Green'?'green':'red']++;
-  });
-  return map;
-}
 function binariaCounts(list){
   return {
     win: list.filter(b=>b.status==='GAIN').length,
@@ -1571,32 +1503,6 @@ function renderBarProfit(canvasId, labels, values){
   });
 }
 
-/* ============================================================
-   BAR CHART: Green vs Red count por categoria
-   (usado quando o gráfico deve contar quantidade de green/red
-   por registro individual, e não somar lucro em R$)
-============================================================ */
-function renderGreenRedBar(canvasId, labels, greenCounts, redCounts){
-  upsertChart(canvasId, {
-    type:'bar',
-    data:{ labels: labels.length?labels:['Sem dados'], datasets:[
-      { label:'Green', data: greenCounts.length?greenCounts:[0], backgroundColor:COLOR_GREEN_SOFT, borderColor:COLOR_GREEN, borderWidth:1.5, borderRadius:6, maxBarThickness:34,
-        datalabels:{ display:true, color:'#fff', font:{weight:'bold', size:11}, anchor:'center', align:'center', formatter:(v)=> v===0?'':v } },
-      { label:'Red', data: redCounts.length?redCounts:[0], backgroundColor:COLOR_RED_SOFT, borderColor:COLOR_RED, borderWidth:1.5, borderRadius:6, maxBarThickness:34,
-        datalabels:{ display:true, color:'#fff', font:{weight:'bold', size:11}, anchor:'center', align:'center', formatter:(v)=> v===0?'':v } }
-    ]},
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      layout:{padding:{top:10}},
-      plugins:{ legend:{display:true, position:'bottom', labels:{boxWidth:12, padding:14, font:{weight:'700', size:11}}} },
-      scales:{
-        x:{ grid:{display:false}, ticks:{ font:{weight:'700', size:11}, autoSkip:false, maxRotation:20 } },
-        y:{ display:false, beginAtZero:true }
-      }
-    }
-  });
-}
-
 function renderDoughnutStatus(canvasId, labels, values, colorArr){
   upsertChart(canvasId, {
     type:'doughnut',
@@ -1765,10 +1671,11 @@ function renderTableApostas(){
     const casa = casaById(a.casaId);
     const lucro = profitAposta(a);
     const cellMap = {
-      data: fmtDate(a.data), esporteTipo: getLegs(a).map(l=> (a.status==='Red' && l.red) ? `<span style="color:var(--red);">❌ ${l.esporte} — ${l.tipo}</span>` : `${l.esporte} — ${l.tipo}`).join('<br>'), casa: casa?casa.nome:'—',
-      momento: getLegs(a).map(l=>l.momento || a.momento || '—').join('<br>'),
-      mercadoGeral: getLegs(a).map(l=>mercadoGeralNome(l.mercadoGeralId!==undefined?l.mercadoGeralId:a.mercadoGeralId)).join('<br>'),
-      mercadoAposta: getLegs(a).map(l=>mercadoApostaNome(l.mercadoApostaId!==undefined?l.mercadoApostaId:a.mercadoApostaId)).join('<br>'),
+      data: fmtDate(a.data), esporteTipo: getLegs(a).map(l=>{
+        const detalhe = [l.partida, l.campeonato].filter(Boolean).join(' · ');
+        return `${l.esporte} — ${l.tipo}`+(detalhe?`<br><span style="color:var(--gray-dim);font-size:11px;">${detalhe}</span>`:'');
+      }).join('<br>'), casa: casa?casa.nome:'—',
+      momento: a.momento || '—', mercadoGeral: mercadoGeralNome(a.mercadoGeralId), mercadoAposta: mercadoApostaNome(a.mercadoApostaId),
       bilhete: a.bilhete || '—',
       valorTipo: a.valorTipo, valor: fmtBRL(a.valor), odd: fmtOdd(a.odd),
       status: statusBadge(a.status), lucro: lucroSpan(lucro)
@@ -2193,12 +2100,12 @@ const REPORT_CHART_LIST = [
   ['chartEvolEsportiva','Evolução da Banca (Esportiva)'],
   ['chartTADiariaEsportiva','TA Diária vs Meta (Esportiva)'],
   ['chartTAMensalEsportiva','TA Mensal — Esportiva'],
-  ['chartEsporte','Green x Red por Esporte'],
-  ['chartTipoAposta','Green x Red por Tipo de Aposta'],
+  ['chartEsporte','Lucro por Esporte'],
+  ['chartTipoAposta','Lucro por Tipo de Aposta'],
   ['chartStatusEsportiva','Green / Red / Reembolso'],
-  ['chartMercadoGeral','Green x Red por Mercado Geral'],
-  ['chartMercadoAposta','Green x Red por Mercado da Aposta'],
-  ['chartMomento','Green x Red por Momento (Pré-live/Live)'],
+  ['chartMercadoGeral','Lucro por Mercado Geral'],
+  ['chartMercadoAposta','Lucro por Mercado da Aposta'],
+  ['chartMomento','Lucro por Momento (Pré-live/Live)'],
   ['chartBilhete','Lucro por Bilhete'],
   ['chartEvolOB','Evolução da Banca (OB)'],
   ['chartTADiariaOB','TA Diária vs Meta (OB)'],
@@ -2332,18 +2239,23 @@ function renderAll(){
   renderEvolChart('chartEvolEsportiva', round2(es.inicial), eventsEsp, COLOR_WHITE);
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
-  const bySport = tallyByLeg(listEsp, l=>l.esporte);
-  renderGreenRedBar('chartEsporte', Object.keys(bySport), Object.values(bySport).map(c=>c.green), Object.values(bySport).map(c=>c.red));
-  const byTipoAposta = tallyByLeg(listEsp, l=>l.tipo);
-  renderGreenRedBar('chartTipoAposta', Object.keys(byTipoAposta), Object.values(byTipoAposta).map(c=>c.green), Object.values(byTipoAposta).map(c=>c.red));
+  const bySport = {};
+  listEsp.forEach(a=>{ const es=[...new Set(getLegs(a).map(l=>l.esporte))]; const share=profitAposta(a)/(es.length||1); es.forEach(esp=>{ bySport[esp]=(bySport[esp]||0)+share; }); });
+  renderBarProfit('chartEsporte', Object.keys(bySport), Object.values(bySport));
+  const byTipoAposta = {};
+  listEsp.forEach(a=>{ const ts=[...new Set(getLegs(a).map(l=>l.tipo))]; const share=profitAposta(a)/(ts.length||1); ts.forEach(tp=>{ byTipoAposta[tp]=(byTipoAposta[tp]||0)+share; }); });
+  renderBarProfit('chartTipoAposta', Object.keys(byTipoAposta), Object.values(byTipoAposta));
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
-  const byMercadoGeral = tallyByLeg(listEsp, l=>mercadoGeralNome(l.mercadoGeralId));
-  renderGreenRedBar('chartMercadoGeral', Object.keys(byMercadoGeral), Object.values(byMercadoGeral).map(c=>c.green), Object.values(byMercadoGeral).map(c=>c.red));
-  const byMercadoAposta = tallyByLeg(listEsp, l=>mercadoApostaNome(l.mercadoApostaId));
-  renderGreenRedBar('chartMercadoAposta', Object.keys(byMercadoAposta), Object.values(byMercadoAposta).map(c=>c.green), Object.values(byMercadoAposta).map(c=>c.red));
-  const byMomento = tallyByLeg(listEsp, l=>l.momento || 'Não informado');
-  renderGreenRedBar('chartMomento', Object.keys(byMomento), Object.values(byMomento).map(c=>c.green), Object.values(byMomento).map(c=>c.red));
+  const byMercadoGeral = {};
+  listEsp.forEach(a=>{ const nm = mercadoGeralNome(a.mercadoGeralId); byMercadoGeral[nm]=(byMercadoGeral[nm]||0)+profitAposta(a); });
+  renderBarProfit('chartMercadoGeral', Object.keys(byMercadoGeral), Object.values(byMercadoGeral));
+  const byMercadoAposta = {};
+  listEsp.forEach(a=>{ const nm = mercadoApostaNome(a.mercadoApostaId); byMercadoAposta[nm]=(byMercadoAposta[nm]||0)+profitAposta(a); });
+  renderBarProfit('chartMercadoAposta', Object.keys(byMercadoAposta), Object.values(byMercadoAposta));
+  const byMomento = {};
+  listEsp.forEach(a=>{ const nm = a.momento || 'Não informado'; byMomento[nm]=(byMomento[nm]||0)+profitAposta(a); });
+  renderBarProfit('chartMomento', Object.keys(byMomento), Object.values(byMomento));
   const byBilhete = {};
   listEsp.forEach(a=>{ const nm = a.bilhete || 'Não informado'; byBilhete[nm]=(byBilhete[nm]||0)+profitAposta(a); });
   renderBarProfit('chartBilhete', Object.keys(byBilhete), Object.values(byBilhete));
@@ -2496,7 +2408,7 @@ function getLegs(a){
 }
 
 segBind('segValorTipo', (v)=>{ document.getElementById('creditoHelper').style.display = v==='Créditos Grátis' ? 'block':'none'; });
-segBind('segStatusAposta', updateLegResultVisibility);
+segBind('segStatusAposta');
 segBind('segTipoOB'); segBind('segStatusOB');
 segBind('segTipoBonus');
 segBind('segTipoMov');
@@ -2505,119 +2417,50 @@ segBind('segBilhete');
 
 /* ---------- APOSTA ---------- */
 let currentLegs = [];
-let editingLegIndex = null; // null = adicionando nova perna; número = editando currentLegs[i]
-function legSummary(l){
-  const bits = [l.momento || 'Pré-live'];
-  if(l.mercadoGeralId) bits.push(mercadoGeralNome(l.mercadoGeralId));
-  if(l.mercadoApostaId) bits.push(mercadoApostaNome(l.mercadoApostaId));
-  return bits.join(' · ');
-}
 function renderLegList(){
   const el = document.getElementById('legList');
   if(currentLegs.length===0){
     el.innerHTML = `<span class="helper-text">Nenhum jogo adicionado ainda.</span>`;
-    updateLegResultVisibility();
     return;
   }
-  el.innerHTML = currentLegs.map((l,i)=>`
-    <span class="chip leg-chip${editingLegIndex===i?' editing':''}" data-i="${i}" title="Toque para editar esta seleção">
-      <span class="legEdit" data-i="${i}">${l.esporte} — ${l.tipo}<br><small style="opacity:.7;">${legSummary(l)}</small></span>
-      <button type="button" data-i="${i}" class="legRemove">✕</button>
-    </span>`).join('');
-  el.querySelectorAll('.legEdit').forEach(span=>{
-    span.addEventListener('click', ()=>{ startEditLeg(parseInt(span.dataset.i,10)); });
-  });
+  el.innerHTML = currentLegs.map((l,i)=>{
+    const detalhe = [l.partida, l.campeonato].filter(Boolean).join(' · ');
+    return `<span class="chip">${l.esporte} — ${l.tipo}${detalhe?` (${detalhe})`:''}<button type="button" data-i="${i}" class="legRemove">✕</button></span>`;
+  }).join('');
   el.querySelectorAll('.legRemove').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      const i = parseInt(btn.dataset.i,10);
-      currentLegs.splice(i, 1);
-      if(editingLegIndex===i) cancelEditLeg();
-      else if(editingLegIndex!==null && editingLegIndex>i) editingLegIndex--;
+      currentLegs.splice(parseInt(btn.dataset.i,10), 1);
       renderLegList();
-      updateLegResultVisibility();
     });
   });
-  updateLegResultVisibility();
 }
-// Carrega os campos do formulário (esporte, tipo, momento, mercados) com os
-// valores da perna currentLegs[i] para o usuário corrigir/completar e salvar.
-function startEditLeg(i){
-  const l = currentLegs[i];
-  if(!l) return;
-  editingLegIndex = i;
-  document.getElementById('legEsporte').value = l.esporte;
-  document.getElementById('legTipo').value = l.tipo;
-  segSet('segMomento', l.momento || 'Pré-live');
-  document.getElementById('apostaMercadoGeral').value = l.mercadoGeralId || '';
-  document.getElementById('apostaMercadoAposta').value = l.mercadoApostaId || '';
-  document.getElementById('btnAddLeg').textContent = '💾 Atualizar esta seleção';
-  document.getElementById('btnCancelEditLeg').style.display = 'inline-flex';
-  renderLegList();
-}
-function cancelEditLeg(){
-  editingLegIndex = null;
-  document.getElementById('btnAddLeg').textContent = '+ Adicionar ao bilhete';
-  document.getElementById('btnCancelEditLeg').style.display = 'none';
-  renderLegList();
-}
-document.getElementById('btnCancelEditLeg').addEventListener('click', cancelEditLeg);
 document.getElementById('btnAddLeg').addEventListener('click', ()=>{
   const esporte = document.getElementById('legEsporte').value;
   const tipo = document.getElementById('legTipo').value;
-  const momento = segValue('segMomento');
-  const mercadoGeralId = document.getElementById('apostaMercadoGeral').value || null;
-  const mercadoApostaId = document.getElementById('apostaMercadoAposta').value || null;
-  if(editingLegIndex!==null){
-    const prev = currentLegs[editingLegIndex];
-    currentLegs[editingLegIndex] = { ...prev, esporte, tipo, momento, mercadoGeralId, mercadoApostaId };
-    toast('Seleção atualizada.');
-    cancelEditLeg();
-    return;
+  const campeonato = document.getElementById('legCampeonato').value.trim();
+  const partida = document.getElementById('legPartida').value.trim();
+  if(currentLegs.some(l=>l.esporte===esporte && l.tipo===tipo && (l.campeonato||'')===campeonato && (l.partida||'')===partida)){
+    toast('Essa combinação já foi adicionada.'); return;
   }
-  if(currentLegs.some(l=>l.esporte===esporte && l.tipo===tipo && l.momento===momento && l.mercadoGeralId===mercadoGeralId && l.mercadoApostaId===mercadoApostaId)){
-    toast('Essa seleção já foi adicionada.'); return;
-  }
-  currentLegs.push({esporte, tipo, momento, mercadoGeralId, mercadoApostaId, red:false});
+  currentLegs.push({esporte, tipo, campeonato, partida});
   renderLegList();
 });
-// Exibe/monta a lista de pernas do bilhete para marcar qual mercado deu Red.
-// Só faz sentido quando o status é Red e existe mais de uma perna no bilhete.
-function updateLegResultVisibility(){
-  const box = document.getElementById('fieldLegResult');
-  const status = segValue('segStatusAposta');
-  const show = status==='Red' && currentLegs.length>=2;
-  box.style.display = show ? 'block' : 'none';
-  if(show) renderLegResultList();
-}
-function renderLegResultList(){
-  const el = document.getElementById('legResultList');
-  el.innerHTML = currentLegs.map((l,i)=>`<span class="chip leg-red-toggle${l.red?' marked':''}" data-i="${i}">${l.red?'❌':'⬜'} ${l.esporte} — ${l.tipo}</span>`).join('');
-  el.querySelectorAll('.leg-red-toggle').forEach(chip=>{
-    chip.addEventListener('click', ()=>{
-      const i = parseInt(chip.dataset.i,10);
-      currentLegs[i].red = !currentLegs[i].red;
-      renderLegResultList();
-    });
-  });
-}
 
 function resetFormAposta(){
   document.getElementById('apostaId').value='';
   document.getElementById('apostaData').value = todayStr();
   document.getElementById('apostaValor').value='';
   document.getElementById('apostaOdd').value='';
-  currentLegs = [{esporte:'⚽ Futebol', tipo:'Estatística de Jogo', momento:'Pré-live', mercadoGeralId:null, mercadoApostaId:null, red:false}];
-  editingLegIndex = null;
-  document.getElementById('btnAddLeg').textContent = '+ Adicionar ao bilhete';
-  document.getElementById('btnCancelEditLeg').style.display = 'none';
+  document.getElementById('legCampeonato').value='';
+  document.getElementById('legPartida').value='';
+  currentLegs = [{esporte:'⚽ Futebol', tipo:'Estatística de Jogo', campeonato:'', partida:''}];
+  renderLegList();
   segSet('segValorTipo','Saldo da Banca'); document.getElementById('creditoHelper').style.display='none';
   segSet('segStatusAposta','Green');
   segSet('segMomento','Pré-live');
   segSet('segBilhete','Simples');
   document.getElementById('apostaMercadoGeral').value='';
   document.getElementById('apostaMercadoAposta').value='';
-  renderLegList();
-  updateLegResultVisibility();
 }
 function openApostaModal(id){
   if(DB.casas.length===0){ toast('Cadastre ao menos uma casa de aposta na aba Bancas.'); return; }
@@ -2630,30 +2473,21 @@ function openApostaModal(id){
     document.getElementById('apostaCasa').value = a.casaId;
     document.getElementById('apostaValor').value = a.valor;
     document.getElementById('apostaOdd').value = a.odd;
-    // Compatibilidade com registros antigos que só tinham momento/mercado no nível do bilhete:
-    // se a perna não tem seu próprio valor salvo, usa o valor antigo do bilhete como ponto de partida.
-    currentLegs = getLegs(a).map(l=>({
-      ...l,
-      momento: l.momento || a.momento || 'Pré-live',
-      mercadoGeralId: l.mercadoGeralId!==undefined ? l.mercadoGeralId : (a.mercadoGeralId || null),
-      mercadoApostaId: l.mercadoApostaId!==undefined ? l.mercadoApostaId : (a.mercadoApostaId || null),
-      red: !!l.red
-    }));
+    currentLegs = getLegs(a).map(l=>({...l}));
     renderLegList();
     segSet('segValorTipo', a.valorTipo);
     document.getElementById('creditoHelper').style.display = a.valorTipo==='Créditos Grátis'?'block':'none';
     segSet('segStatusAposta', a.status);
+    segSet('segMomento', a.momento || 'Pré-live');
     segSet('segBilhete', a.bilhete || 'Simples');
-    updateLegResultVisibility();
+    document.getElementById('apostaMercadoGeral').value = a.mercadoGeralId || '';
+    document.getElementById('apostaMercadoAposta').value = a.mercadoApostaId || '';
   }
   openModal('modalAposta');
 }
 document.getElementById('formAposta').addEventListener('submit', e=>{
   e.preventDefault();
   if(currentLegs.length===0){ toast('Adicione ao menos um esporte + tipo de aposta ao bilhete.'); return; }
-  if(editingLegIndex!==null){ toast('Finalize a edição da seleção (Atualizar ou Cancelar) antes de salvar.'); return; }
-  const statusFinal = segValue('segStatusAposta');
-  if(statusFinal!=='Red'){ currentLegs.forEach(l=>{ l.red=false; }); }
   const id = document.getElementById('apostaId').value;
   const rec = {
     id: id || uid(),
@@ -2662,11 +2496,9 @@ document.getElementById('formAposta').addEventListener('submit', e=>{
     legs: currentLegs.map(l=>({...l})),
     esporte: currentLegs.map(l=>l.esporte),
     tipo: currentLegs.map(l=>l.tipo),
-    // Campos mantidos no nível do bilhete apenas por compatibilidade com telas antigas;
-    // a fonte de verdade agora é o momento/mercado de cada perna em "legs".
-    momento: currentLegs[0] ? currentLegs[0].momento : null,
-    mercadoGeralId: currentLegs[0] ? currentLegs[0].mercadoGeralId : null,
-    mercadoApostaId: currentLegs[0] ? currentLegs[0].mercadoApostaId : null,
+    momento: segValue('segMomento'),
+    mercadoGeralId: document.getElementById('apostaMercadoGeral').value || null,
+    mercadoApostaId: document.getElementById('apostaMercadoAposta').value || null,
     bilhete: segValue('segBilhete'),
     valorTipo: segValue('segValorTipo'),
     valor: parseFloat(document.getElementById('apostaValor').value)||0,
@@ -2676,31 +2508,6 @@ document.getElementById('formAposta').addEventListener('submit', e=>{
   if(id){ const i = DB.apostas.findIndex(x=>x.id===id); DB.apostas[i]=rec; toast('Aposta atualizada.'); }
   else { DB.apostas.push(rec); toast('Aposta registrada.'); }
   saveDB(); closeModal('modalAposta'); renderAll();
-});
-// Adiciona um novo mercado (geral ou da aposta) sem sair do formulário de aposta,
-// e já seleciona o item recém-criado no select correspondente.
-function quickAddMercado(tipo){
-  const isGeral = tipo==='geral';
-  const label = isGeral ? 'mercado geral' : 'mercado da aposta';
-  const nome = prompt(`Nome do novo ${label}:`);
-  if(nome===null || !nome.trim()) return;
-  const novo = { id:uid(), nome:nome.trim() };
-  if(isGeral) DB.mercadosGerais.push(novo); else DB.mercadosApostas.push(novo);
-  saveDB();
-  refreshSelects();
-  renderMercadosUI();
-  document.getElementById(isGeral?'apostaMercadoGeral':'apostaMercadoAposta').value = novo.id;
-  toast(`${isGeral?'Mercado geral':'Mercado da aposta'} adicionado.`);
-}
-document.getElementById('btnQuickAddMercadoGeral').addEventListener('click', ()=>quickAddMercado('geral'));
-document.getElementById('btnQuickAddMercadoAposta').addEventListener('click', ()=>quickAddMercado('aposta'));
-document.getElementById('linkGerenciarMercados').addEventListener('click', ()=>{
-  closeModal('modalAposta');
-  switchTab('bancas');
-  requestAnimationFrame(()=>{
-    const el = document.getElementById('secaoMercados');
-    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-  });
 });
 
 /* ---------- OB ---------- */
