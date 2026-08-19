@@ -886,14 +886,20 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="field-row" style="margin-top:8px;">
           <div class="field">
             <label>Mercado Geral</label>
-            <select id="legMercadoGeral"><option value="">— Nenhum —</option></select>
+            <div style="display:flex;gap:6px;">
+              <select id="legMercadoGeral" style="flex:1;"><option value="">— Nenhum —</option></select>
+              <button type="button" class="btn btn-sm" id="btnNewMercadoGeral" title="Adicionar novo mercado geral">+</button>
+            </div>
           </div>
           <div class="field">
             <label>Mercado da Aposta</label>
-            <select id="legMercadoAposta"><option value="">— Nenhum —</option></select>
+            <div style="display:flex;gap:6px;">
+              <select id="legMercadoAposta" style="flex:1;"><option value="">— Nenhum —</option></select>
+              <button type="button" class="btn btn-sm" id="btnNewMercadoAposta" title="Adicionar novo mercado da aposta">+</button>
+            </div>
           </div>
         </div>
-        <div class="helper-text" style="margin:-2px 0 4px;">Gerencie as opções de mercado na aba <b>Bancas</b>.</div>
+        <div class="helper-text" style="margin:-2px 0 4px;">Toque no <b>+</b> pra cadastrar um mercado novo na hora, ou gerencie tudo na aba <b>Bancas</b>.</div>
         <button type="button" class="btn btn-sm" id="btnAddLeg" style="margin-top:8px;">+ Adicionar ao bilhete</button>
         <div class="filter-chips" id="legList" style="margin-top:10px;"></div>
         <div class="helper-text">Bilhete com mais de um jogo? Preencha esporte, tipo, campeonato/partida, momento e mercado de cada jogo e adicione separadamente — todo mundo pode ser diferente por jogo. Só o "Bilhete" abaixo vale pro bilhete inteiro.</div>
@@ -2449,6 +2455,25 @@ function renderLegList(){
     });
   });
 }
+function addMercadoInline(tipo){
+  const label = tipo==='geral' ? 'mercado geral' : 'mercado da aposta';
+  const nome = prompt('Nome do novo '+label+':');
+  if(!nome || !nome.trim()) return;
+  const m = { id:uid(), nome:nome.trim() };
+  const list = tipo==='geral' ? DB.mercadosGerais : DB.mercadosApostas;
+  list.push(m);
+  saveDB();
+  const select = document.getElementById(tipo==='geral' ? 'legMercadoGeral' : 'legMercadoAposta');
+  const opt = document.createElement('option');
+  opt.value = m.id; opt.textContent = m.nome;
+  select.appendChild(opt);
+  select.value = m.id;
+  renderMercadosUI();
+  toast('Mercado adicionado — já selecionado.');
+}
+document.getElementById('btnNewMercadoGeral').addEventListener('click', ()=>addMercadoInline('geral'));
+document.getElementById('btnNewMercadoAposta').addEventListener('click', ()=>addMercadoInline('aposta'));
+
 document.getElementById('btnAddLeg').addEventListener('click', ()=>{
   const esporte = document.getElementById('legEsporte').value;
   const tipo = document.getElementById('legTipo').value;
