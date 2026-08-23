@@ -357,9 +357,26 @@ tbody tr:last-child td{border-bottom:none;}
   font-family:var(--font-display); font-size:16px; letter-spacing:.5px;
   color:var(--white); margin-bottom:10px;
 }
-.chip.leg-red{border-color:var(--red-dim);color:#ff8b91;}
-.chip.leg-amber{border-color:#6b511f;color:var(--amber);}
-.chip.leg-gray{border-color:var(--line2);color:var(--gray);}
+.leg-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--card2); border:1px solid var(--line2); border-radius:10px;
+  padding:8px 10px; margin-bottom:8px;
+}
+.leg-item-info{min-width:0;}
+.leg-item-title{font-size:12.5px; font-weight:700; color:var(--white);}
+.leg-item-detail{font-size:10.5px; color:var(--gray-dim); margin-top:2px;}
+.leg-item-actions{display:flex; align-items:center; gap:8px; flex-shrink:0;}
+.mini-seg{display:flex; gap:3px;}
+.mini-seg button{
+  background:var(--bg2); border:1px solid var(--line2); color:var(--gray);
+  font-size:10.5px; font-weight:800; padding:6px 8px; border-radius:6px; min-width:28px;
+}
+.mini-seg button.active{background:var(--red); border-color:var(--red); color:#fff;}
+.mini-seg button.active.gain{background:var(--green); border-color:var(--green);}
+.mini-seg button[data-v="Reembolso"].active{background:var(--amber); border-color:var(--amber); color:#1a1206;}
+.mini-seg button[data-v="Pendente"].active{background:var(--gray-dim); border-color:var(--gray-dim); color:#111;}
+.leg-item .legRemove{background:none; border:none; color:var(--gray-dim); font-size:15px; padding:4px 6px;}
+.leg-item .legRemove:hover{color:var(--red);}
 .bilhete-status-box{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   background:var(--card2); border:1px solid var(--line2); border-radius:10px; padding:10px 14px;
@@ -2515,14 +2532,39 @@ function renderLegList(){
   if(currentLegs.length===0){
     el.innerHTML = `<span class="helper-text">Nenhum mercado adicionado ainda.</span>`;
   } else {
-    const resultClass = { Red:'leg-red', Reembolso:'leg-amber', Pendente:'leg-gray' };
+    const opts = [
+      {v:'Green', label:'G', extra:'gain'},
+      {v:'Red', label:'R', extra:''},
+      {v:'Reembolso', label:'Re', extra:''},
+      {v:'Pendente', label:'Pe', extra:''}
+    ];
     el.innerHTML = currentLegs.map((l,i)=>{
       const mg = mercadoGeralNome(l.mercadoGeralId), ma = mercadoApostaNome(l.mercadoApostaId);
       const detalhe = [l.partida, l.campeonato, l.momento, mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ');
-      const resultTag = l.resultado && l.resultado!=='Green' ? ` — ${l.resultado}` : '';
-      const cls = resultClass[l.resultado] || '';
-      return `<span class="chip ${cls}">${l.esporte} — ${l.tipo}${detalhe?` (${detalhe})`:''}${resultTag}<button type="button" data-i="${i}" class="legRemove">✕</button></span>`;
+      const miniBtns = opts.map(o=>{
+        const active = l.resultado===o.v ? ('active '+o.extra) : '';
+        return `<button type="button" data-v="${o.v}" class="${active}">${o.label}</button>`;
+      }).join('');
+      return `<div class="leg-item">
+        <div class="leg-item-info">
+          <div class="leg-item-title">${l.esporte} — ${l.tipo}</div>
+          ${detalhe?`<div class="leg-item-detail">${detalhe}</div>`:''}
+        </div>
+        <div class="leg-item-actions">
+          <div class="mini-seg" data-i="${i}">${miniBtns}</div>
+          <button type="button" class="legRemove" data-i="${i}" title="Remover">✕</button>
+        </div>
+      </div>`;
     }).join('');
+    el.querySelectorAll('.mini-seg').forEach(wrap=>{
+      wrap.querySelectorAll('button').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const i = parseInt(wrap.dataset.i, 10);
+          currentLegs[i].resultado = btn.dataset.v;
+          renderLegList();
+        });
+      });
+    });
     el.querySelectorAll('.legRemove').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         currentLegs.splice(parseInt(btn.dataset.i,10), 1);
