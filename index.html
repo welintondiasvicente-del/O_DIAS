@@ -362,6 +362,14 @@ tbody tr:last-child td{border-bottom:none;}
   background:var(--card2); border:1px solid var(--line2); border-radius:10px;
   padding:8px 10px; margin-bottom:8px;
 }
+.leg-item-block{ display:block; }
+.leg-item-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mercado-sub-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+.mercado-sub-item{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:6px 8px;
+}
+.mercado-sub-label{ font-size:11.5px; color:var(--gray); min-width:0; }
 .leg-item-info{min-width:0;}
 .leg-item-title{font-size:12.5px; font-weight:700; color:var(--white);}
 .leg-item-detail{font-size:10.5px; color:var(--gray-dim); margin-top:2px;}
@@ -870,6 +878,9 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="section-title small">Resumo por Tipo de Aposta<div class="rule"></div></div>
     <div class="report-table-wrap"><table id="tblResumoTipoAposta"><thead></thead><tbody></tbody></table></div>
 
+    <div class="section-title small">Resumo por Time / Jogador Apostado<div class="rule"></div></div>
+    <div class="report-table-wrap"><table id="tblResumoEntidade"><thead></thead><tbody></tbody></table></div>
+
     <div class="section-title small">Resumo por CALL / PUT (OB)<div class="rule"></div></div>
     <div class="report-table-wrap"><table id="tblResumoCallPut"><thead></thead><tbody></tbody></table></div>
 
@@ -943,6 +954,10 @@ tbody tr:last-child td{border-bottom:none;}
             </div>
           </div>
         </div>
+        <div class="field" id="legEntidadeWrap" style="margin-top:8px; display:none;">
+          <label>Time ou Jogador Apostado (deste mercado)</label>
+          <input type="text" id="legEntidadeApostada" placeholder="Ex: Vinícius Júnior ou Real Madrid">
+        </div>
         <div class="field" style="margin-top:8px;">
           <label>Resultado deste mercado</label>
           <div class="seg" id="legResultado">
@@ -951,10 +966,13 @@ tbody tr:last-child td{border-bottom:none;}
             <button type="button" data-v="Reembolso">Reembolso</button>
             <button type="button" data-v="Pendente">Pendente</button>
           </div>
-          <div class="helper-text">O que não marcar fica como Green por padrão. Se um mercado do bilhete der Red, o bilhete inteiro conta como Red automaticamente.</div>
         </div>
-        <button type="button" class="btn btn-sm btn-primary" id="btnAddLeg" style="margin-top:10px;">+ Adicionar ao bilhete</button>
-        <div class="filter-chips" id="legList" style="margin-top:10px;"></div>
+        <button type="button" class="btn btn-sm" id="btnAddMercado" style="margin-top:6px;">+ Adicionar Mercado a esta Partida</button>
+        <div id="mercadoStagingList" style="margin-top:8px;"></div>
+        <div class="helper-text">Adicione quantos mercados quiser pra essa partida (ex: Finalizações e Escanteios do mesmo jogo). Depois, confirme o jogo no bilhete abaixo.</div>
+        <button type="button" class="btn btn-sm btn-primary" id="btnAddLeg" style="margin-top:10px;">+ Confirmar Partida no Bilhete</button>
+        <div class="helper-text">O que não marcar fica como Green por padrão. Se um mercado do bilhete der Red, o bilhete inteiro conta como Red automaticamente.</div>
+        <div id="legList" style="margin-top:12px;"></div>
       </div>
 
       <div class="field bilhete-status-box">
@@ -1552,14 +1570,29 @@ function renderBarProfit(canvasId, labels, values){
 
 // Conta quantas vezes cada valor (esporte, mercado, etc.) apareceu como Green vs Red,
 // olhando o resultado de cada mercado (perna) individualmente, sem misturar com R$.
-function greenRedCounts(listEsp, getValueFn){
+function greenRedCountsByLeg(listEsp, getValueFn){
   const counts = {};
   listEsp.forEach(a=>{
     getLegs(a).forEach(l=>{
       const key = getValueFn(l);
+      const st = legStatus(l);
       if(!counts[key]) counts[key] = {green:0, red:0};
-      if(l.resultado==='Green') counts[key].green++;
-      else if(l.resultado==='Red') counts[key].red++;
+      if(st==='Green') counts[key].green++;
+      else if(st==='Red') counts[key].red++;
+    });
+  });
+  return counts;
+}
+function greenRedCountsByMercado(listEsp, getValueFn){
+  const counts = {};
+  listEsp.forEach(a=>{
+    getLegs(a).forEach(l=>{
+      (l.mercados||[]).forEach(m=>{
+        const key = getValueFn(m);
+        if(!counts[key]) counts[key] = {green:0, red:0};
+        if(m.resultado==='Green') counts[key].green++;
+        else if(m.resultado==='Red') counts[key].red++;
+      });
     });
   });
   return counts;
@@ -1758,13 +1791,20 @@ function renderTableApostas(){
     const legs = getLegs(a);
     const cellMap = {
       data: fmtDate(a.data), esporteTipo: legs.map(l=>{
-        const mg = mercadoGeralNome(l.mercadoGeralId), ma = mercadoApostaNome(l.mercadoApostaId);
-        const detalhe = [l.partida, l.campeonato, l.momento, mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ');
-        return `${l.esporte} — ${l.tipo}`+(detalhe?`<br><span style="color:var(--gray-dim);font-size:11px;">${detalhe}</span>`:'');
-      }).join('<br>'), casa: casa?casa.nome:'—',
+        const detalheTop = [l.partida, l.campeonato, l.momento].filter(Boolean).join(' · ');
+        const mercadosLine = (l.mercados||[]).map(m=>{
+          const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
+          const label = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ');
+          return `${label||'Mercado'} (${m.resultado})`;
+        }).join(', ');
+        let html = `${l.esporte} — ${l.tipo}`;
+        if(detalheTop) html += `<br><span style="color:var(--gray-dim);font-size:11px;">${detalheTop}</span>`;
+        if(mercadosLine) html += `<br><span style="color:var(--gray-dim);font-size:10.5px;">${mercadosLine}</span>`;
+        return html;
+      }).join('<br><br>'), casa: casa?casa.nome:'—',
       momento: [...new Set(legs.map(l=>l.momento||'—'))].join(', '),
-      mercadoGeral: [...new Set(legs.map(l=>mercadoGeralNome(l.mercadoGeralId)))].join(', '),
-      mercadoAposta: [...new Set(legs.map(l=>mercadoApostaNome(l.mercadoApostaId)))].join(', '),
+      mercadoGeral: [...new Set(legs.flatMap(l=>(l.mercados||[]).map(m=>mercadoGeralNome(m.mercadoGeralId))))].join(', '),
+      mercadoAposta: [...new Set(legs.flatMap(l=>(l.mercados||[]).map(m=>mercadoApostaNome(m.mercadoApostaId))))].join(', '),
       bilhete: a.bilhete || '—',
       valorTipo: a.valorTipo, valor: fmtBRL(a.valor), odd: fmtOdd(a.odd),
       status: statusBadge(a.status), lucro: lucroSpan(lucro)
@@ -2049,6 +2089,28 @@ function resumoTipoAposta(){
     return { nome:tp, apostas:g.apostas, green:g.green, red:g.red, push:g.push, pending:g.pending, ta, lucro:g.lucro };
   });
 }
+function resumoEntidades(){
+  const grupos = {};
+  DB.apostas.forEach(a=>{
+    getLegs(a).forEach(l=>{
+      (l.mercados||[]).forEach(m=>{
+        const nome = (m.entidade||'').trim();
+        if(!nome) return;
+        const g = grupos[nome] = grupos[nome] || {total:0, green:0, red:0, push:0, pending:0};
+        g.total++;
+        if(m.resultado==='Green') g.green++;
+        else if(m.resultado==='Red') g.red++;
+        else if(m.resultado==='Reembolso') g.push++;
+        else if(m.resultado==='Pendente') g.pending++;
+      });
+    });
+  });
+  return Object.keys(grupos).sort((a,b)=>a.localeCompare(b)).map(nome=>{
+    const g = grupos[nome];
+    const ta = taFrom({win:g.green, loss:g.red});
+    return { nome, total:g.total, green:g.green, red:g.red, push:g.push, pending:g.pending, ta };
+  });
+}
 function resumoCallPut(){
   const grupos = { CALL:[], PUT:[] };
   DB.binarias.forEach(b=>{ if(grupos[b.tipo]) grupos[b.tipo].push(b); });
@@ -2118,7 +2180,7 @@ function renderRelatorio(){
   ].join('');
 
   const rCasas = resumoCasas(), rPlats = resumoPlataformas(), rEsp = resumoEsporte(),
-        rTipo = resumoTipoAposta(), rCallPut = resumoCallPut(), rMes = resumoMensal();
+        rTipo = resumoTipoAposta(), rEntidade = resumoEntidades(), rCallPut = resumoCallPut(), rMes = resumoMensal();
   const events = combinedProfitEvents();
   const diaBW = bestWorstBucket(events, 'diaria');
   const mesBW = bestWorstBucket(events, 'mensal');
@@ -2160,6 +2222,11 @@ function renderRelatorio(){
     {label:'Tipo de Aposta', render:r=>r.nome}, {label:'Apostas', render:r=>r.apostas}, {label:'Green', render:r=>r.green},
     {label:'Red', render:r=>r.red}, {label:'Reemb.', render:r=>r.push}, {label:'Pend.', render:r=>r.pending}, {label:'TA', render:r=>r.ta.toFixed(1)+'%'}, {label:'Lucro', render:r=>lucroSpan(r.lucro)}
   ], rTipo);
+
+  document.getElementById('tblResumoEntidade').innerHTML = reportTableRows([
+    {label:'Time / Jogador', render:r=>r.nome}, {label:'Mercados', render:r=>r.total}, {label:'Green', render:r=>r.green},
+    {label:'Red', render:r=>r.red}, {label:'Reemb.', render:r=>r.push}, {label:'Pend.', render:r=>r.pending}, {label:'TA', render:r=>r.ta.toFixed(1)+'%'}
+  ], rEntidade);
 
   document.getElementById('tblResumoCallPut').innerHTML = reportTableRows([
     {label:'Tipo', render:r=>r.nome}, {label:'Operações', render:r=>r.operacoes}, {label:'Gain', render:r=>r.gain},
@@ -2256,6 +2323,7 @@ function buildPrintReport(images){
   html += tableBlock('Resumo por Plataforma (OB)','tblResumoPlataformas');
   html += tableBlock('Resumo por Esporte','tblResumoEsporte');
   html += tableBlock('Resumo por Tipo de Aposta','tblResumoTipoAposta');
+  html += tableBlock('Resumo por Time / Jogador Apostado','tblResumoEntidade');
   html += tableBlock('Resumo por CALL / PUT (OB)','tblResumoCallPut');
   html += tableBlock('Fechamento Mensal (Geral)','tblResumoMensal');
 
@@ -2328,17 +2396,17 @@ function renderAll(){
   renderEvolChart('chartEvolEsportiva', round2(es.inicial), eventsEsp, COLOR_WHITE);
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
-  const gcEsporte = greenRedCounts(listEsp, l=>l.esporte);
+  const gcEsporte = greenRedCountsByLeg(listEsp, l=>l.esporte);
   renderGreenRedChart('chartEsporte', gcEsporte);
-  const gcTipo = greenRedCounts(listEsp, l=>l.tipo);
+  const gcTipo = greenRedCountsByLeg(listEsp, l=>l.tipo);
   renderGreenRedChart('chartTipoAposta', gcTipo);
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
-  const gcMercadoGeral = greenRedCounts(listEsp, l=>mercadoGeralNome(l.mercadoGeralId));
+  const gcMercadoGeral = greenRedCountsByMercado(listEsp, m=>mercadoGeralNome(m.mercadoGeralId));
   renderGreenRedChart('chartMercadoGeral', gcMercadoGeral);
-  const gcMercadoAposta = greenRedCounts(listEsp, l=>mercadoApostaNome(l.mercadoApostaId));
+  const gcMercadoAposta = greenRedCountsByMercado(listEsp, m=>mercadoApostaNome(m.mercadoApostaId));
   renderGreenRedChart('chartMercadoAposta', gcMercadoAposta);
-  const gcMomento = greenRedCounts(listEsp, l=>l.momento||'Não informado');
+  const gcMomento = greenRedCountsByLeg(listEsp, l=>l.momento||'Não informado');
   renderGreenRedChart('chartMomento', gcMomento);
   const byBilhete = {};
   listEsp.forEach(a=>{ const nm = a.bilhete || 'Não informado'; byBilhete[nm]=(byBilhete[nm]||0)+profitAposta(a); });
@@ -2493,14 +2561,30 @@ function getLegs(a){
       });
     }
   }
-  // Compatibilidade: registros antigos guardavam momento/mercado/resultado no nível do bilhete inteiro.
-  return legs.map(l=>({
-    ...l,
-    momento: l.momento!==undefined ? l.momento : a.momento,
-    mercadoGeralId: l.mercadoGeralId!==undefined ? l.mercadoGeralId : a.mercadoGeralId,
-    mercadoApostaId: l.mercadoApostaId!==undefined ? l.mercadoApostaId : a.mercadoApostaId,
-    resultado: l.resultado!==undefined ? l.resultado : (a.status || 'Green')
-  }));
+  // Compatibilidade: registros antigos guardavam momento no nível do bilhete inteiro,
+  // e mercado/resultado direto na "perna" (sem lista de mercados aninhada).
+  return legs.map(l=>{
+    const momento = l.momento!==undefined ? l.momento : a.momento;
+    let mercados;
+    if(Array.isArray(l.mercados)){
+      mercados = l.mercados;
+    } else {
+      mercados = [{
+        mercadoGeralId: l.mercadoGeralId!==undefined ? l.mercadoGeralId : a.mercadoGeralId,
+        mercadoApostaId: l.mercadoApostaId!==undefined ? l.mercadoApostaId : a.mercadoApostaId,
+        resultado: l.resultado!==undefined ? l.resultado : (a.status || 'Green')
+      }];
+    }
+    return { esporte:l.esporte, tipo:l.tipo, campeonato:l.campeonato, partida:l.partida, momento, mercados };
+  });
+}
+function legStatus(l){
+  const ms = l.mercados||[];
+  if(ms.length===0) return 'Green';
+  if(ms.some(m=>m.resultado==='Red')) return 'Red';
+  if(ms.some(m=>m.resultado==='Pendente')) return 'Pendente';
+  if(ms.every(m=>m.resultado==='Reembolso')) return 'Reembolso';
+  return 'Green';
 }
 
 segBind('segValorTipo', (v)=>{ document.getElementById('creditoHelper').style.display = v==='Créditos Grátis' ? 'block':'none'; });
@@ -2511,12 +2595,27 @@ segBind('legMomento');
 segBind('legResultado');
 segBind('segBilhete');
 
+/* ---------- Time/Jogador apostado (visível só para Estatística de Jogador/Equipe) ---------- */
+function tipoUsaEntidade(tipo){
+  return tipo === 'Estatística de Jogador' || tipo === 'Estatística de Equipe Individual';
+}
+function updateLegEntidadeVisibility(){
+  const tipo = document.getElementById('legTipo').value;
+  const wrap = document.getElementById('legEntidadeWrap');
+  wrap.style.display = tipoUsaEntidade(tipo) ? 'block' : 'none';
+  if(!tipoUsaEntidade(tipo)) document.getElementById('legEntidadeApostada').value = '';
+}
+document.getElementById('legTipo').addEventListener('change', updateLegEntidadeVisibility);
+updateLegEntidadeVisibility();
+
 /* ---------- APOSTA ---------- */
 function deriveBilheteStatus(legs){
-  if(!legs || legs.length===0) return 'Green';
-  if(legs.some(l=>l.resultado==='Red')) return 'Red';
-  if(legs.some(l=>l.resultado==='Pendente')) return 'Pendente';
-  if(legs.every(l=>l.resultado==='Reembolso')) return 'Reembolso';
+  const mercados = [];
+  (legs||[]).forEach(l=>(l.mercados||[]).forEach(m=>mercados.push(m)));
+  if(mercados.length===0) return 'Green';
+  if(mercados.some(m=>m.resultado==='Red')) return 'Red';
+  if(mercados.some(m=>m.resultado==='Pendente')) return 'Pendente';
+  if(mercados.every(m=>m.resultado==='Reembolso')) return 'Reembolso';
   return 'Green';
 }
 function renderBilheteStatusDisplay(){
@@ -2527,53 +2626,117 @@ function renderBilheteStatusDisplay(){
 }
 
 let currentLegs = [];
+let currentMercados = [];
+
+function renderMercadoStaging(){
+  const el = document.getElementById('mercadoStagingList');
+  if(currentMercados.length===0){
+    el.innerHTML = `<span class="helper-text">Nenhum mercado adicionado pra essa partida ainda.</span>`;
+    return;
+  }
+  const opts = [
+    {v:'Green', label:'G', extra:'gain'},
+    {v:'Red', label:'R', extra:''},
+    {v:'Reembolso', label:'Re', extra:''},
+    {v:'Pendente', label:'Pe', extra:''}
+  ];
+  el.innerHTML = currentMercados.map((m,i)=>{
+    const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
+    let label = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ') || 'Mercado sem nome';
+    if(m.entidade) label += ' — 🎯 ' + m.entidade;
+    const miniBtns = opts.map(o=>{
+      const active = m.resultado===o.v ? ('active '+o.extra) : '';
+      return `<button type="button" data-v="${o.v}" class="${active}">${o.label}</button>`;
+    }).join('');
+    return `<div class="leg-item">
+      <div class="leg-item-info"><div class="leg-item-title">${label}</div></div>
+      <div class="leg-item-actions">
+        <div class="mini-seg" data-i="${i}">${miniBtns}</div>
+        <button type="button" class="legRemove" data-i="${i}" title="Remover">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.mini-seg').forEach(wrap=>{
+    wrap.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const i = parseInt(wrap.dataset.i,10);
+        currentMercados[i].resultado = btn.dataset.v;
+        renderMercadoStaging();
+      });
+    });
+  });
+  el.querySelectorAll('.legRemove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentMercados.splice(parseInt(btn.dataset.i,10),1);
+      renderMercadoStaging();
+    });
+  });
+}
+
 function renderLegList(){
   const el = document.getElementById('legList');
   if(currentLegs.length===0){
-    el.innerHTML = `<span class="helper-text">Nenhum mercado adicionado ainda.</span>`;
-  } else {
-    const opts = [
-      {v:'Green', label:'G', extra:'gain'},
-      {v:'Red', label:'R', extra:''},
-      {v:'Reembolso', label:'Re', extra:''},
-      {v:'Pendente', label:'Pe', extra:''}
-    ];
-    el.innerHTML = currentLegs.map((l,i)=>{
-      const mg = mercadoGeralNome(l.mercadoGeralId), ma = mercadoApostaNome(l.mercadoApostaId);
-      const detalhe = [l.partida, l.campeonato, l.momento, mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ');
+    el.innerHTML = `<span class="helper-text">Nenhuma partida confirmada no bilhete ainda.</span>`;
+    renderBilheteStatusDisplay();
+    return;
+  }
+  const opts = [
+    {v:'Green', label:'G', extra:'gain'},
+    {v:'Red', label:'R', extra:''},
+    {v:'Reembolso', label:'Re', extra:''},
+    {v:'Pendente', label:'Pe', extra:''}
+  ];
+  el.innerHTML = currentLegs.map((l,li)=>{
+    const detalheTop = [l.partida, l.campeonato, l.momento].filter(Boolean).join(' · ');
+    const mercadosHtml = (l.mercados||[]).map((m,mi)=>{
+      const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
+      let label = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ') || 'Mercado';
+      if(m.entidade) label += ' — 🎯 ' + m.entidade;
       const miniBtns = opts.map(o=>{
-        const active = l.resultado===o.v ? ('active '+o.extra) : '';
+        const active = m.resultado===o.v ? ('active '+o.extra) : '';
         return `<button type="button" data-v="${o.v}" class="${active}">${o.label}</button>`;
       }).join('');
-      return `<div class="leg-item">
-        <div class="leg-item-info">
-          <div class="leg-item-title">${l.esporte} — ${l.tipo}</div>
-          ${detalhe?`<div class="leg-item-detail">${detalhe}</div>`:''}
-        </div>
-        <div class="leg-item-actions">
-          <div class="mini-seg" data-i="${i}">${miniBtns}</div>
-          <button type="button" class="legRemove" data-i="${i}" title="Remover">✕</button>
-        </div>
+      return `<div class="mercado-sub-item">
+        <span class="mercado-sub-label">${label}</span>
+        <div class="mini-seg" data-li="${li}" data-mi="${mi}">${miniBtns}</div>
+        <button type="button" class="legRemove mercadoSubRemove" data-li="${li}" data-mi="${mi}" title="Remover mercado">✕</button>
       </div>`;
     }).join('');
-    el.querySelectorAll('.mini-seg').forEach(wrap=>{
-      wrap.querySelectorAll('button').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const i = parseInt(wrap.dataset.i, 10);
-          currentLegs[i].resultado = btn.dataset.v;
-          renderLegList();
-        });
-      });
-    });
-    el.querySelectorAll('.legRemove').forEach(btn=>{
+    return `<div class="leg-item leg-item-block">
+      <div class="leg-item-header">
+        <div class="leg-item-title">${l.esporte} — ${l.tipo}</div>
+        <button type="button" class="legRemove legRemoveWhole" data-li="${li}" title="Remover partida inteira">✕</button>
+      </div>
+      ${detalheTop?`<div class="leg-item-detail">${detalheTop}</div>`:''}
+      <div class="mercado-sub-list">${mercadosHtml}</div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.mini-seg').forEach(wrap=>{
+    wrap.querySelectorAll('button').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        currentLegs.splice(parseInt(btn.dataset.i,10), 1);
+        const li = parseInt(wrap.dataset.li,10), mi = parseInt(wrap.dataset.mi,10);
+        currentLegs[li].mercados[mi].resultado = btn.dataset.v;
         renderLegList();
       });
     });
-  }
+  });
+  el.querySelectorAll('.mercadoSubRemove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const li = parseInt(btn.dataset.li,10), mi = parseInt(btn.dataset.mi,10);
+      currentLegs[li].mercados.splice(mi,1);
+      if(currentLegs[li].mercados.length===0) currentLegs.splice(li,1);
+      renderLegList();
+    });
+  });
+  el.querySelectorAll('.legRemoveWhole').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentLegs.splice(parseInt(btn.dataset.li,10),1);
+      renderLegList();
+    });
+  });
   renderBilheteStatusDisplay();
 }
+
 function addMercadoInline(tipo){
   const label = tipo==='geral' ? 'mercado geral' : 'mercado da aposta';
   const nome = prompt('Nome do novo '+label+':');
@@ -2593,22 +2756,45 @@ function addMercadoInline(tipo){
 document.getElementById('btnNewMercadoGeral').addEventListener('click', ()=>addMercadoInline('geral'));
 document.getElementById('btnNewMercadoAposta').addEventListener('click', ()=>addMercadoInline('aposta'));
 
+document.getElementById('btnAddMercado').addEventListener('click', ()=>{
+  const mercadoGeralId = document.getElementById('legMercadoGeral').value || null;
+  const mercadoApostaId = document.getElementById('legMercadoAposta').value || null;
+  const resultado = segValue('legResultado');
+  const entidade = document.getElementById('legEntidadeApostada').value.trim();
+  if(!mercadoGeralId && !mercadoApostaId){ toast('Selecione ao menos um mercado (geral ou apostado).'); return; }
+  currentMercados.push({ mercadoGeralId, mercadoApostaId, resultado, entidade });
+  renderMercadoStaging();
+  document.getElementById('legMercadoGeral').value = '';
+  document.getElementById('legMercadoAposta').value = '';
+  document.getElementById('legEntidadeApostada').value = '';
+  segSet('legResultado','Green');
+});
+
 document.getElementById('btnAddLeg').addEventListener('click', ()=>{
   const esporte = document.getElementById('legEsporte').value;
   const tipo = document.getElementById('legTipo').value;
   const campeonato = document.getElementById('legCampeonato').value.trim();
   const partida = document.getElementById('legPartida').value.trim();
   const momento = segValue('legMomento');
-  const mercadoGeralId = document.getElementById('legMercadoGeral').value || null;
-  const mercadoApostaId = document.getElementById('legMercadoAposta').value || null;
-  const resultado = segValue('legResultado');
-  if(currentLegs.some(l=>l.esporte===esporte && l.tipo===tipo && (l.campeonato||'')===campeonato && (l.partida||'')===partida
-      && l.momento===momento && (l.mercadoGeralId||null)===mercadoGeralId && (l.mercadoApostaId||null)===mercadoApostaId && l.resultado===resultado)){
-    toast('Esse mercado já foi adicionado.'); return;
+  let mercados = currentMercados.map(m=>({...m}));
+  const pendingMG = document.getElementById('legMercadoGeral').value || null;
+  const pendingMA = document.getElementById('legMercadoAposta').value || null;
+  const pendingEntidade = document.getElementById('legEntidadeApostada').value.trim();
+  if(pendingMG || pendingMA){
+    mercados.push({ mercadoGeralId:pendingMG, mercadoApostaId:pendingMA, resultado:segValue('legResultado'), entidade:pendingEntidade });
   }
-  currentLegs.push({esporte, tipo, campeonato, partida, momento, mercadoGeralId, mercadoApostaId, resultado});
-  renderLegList();
+  if(mercados.length===0){
+    mercados.push({ mercadoGeralId:null, mercadoApostaId:null, resultado:segValue('legResultado'), entidade:pendingEntidade });
+  }
+  currentLegs.push({ esporte, tipo, campeonato, partida, momento, mercados });
+  currentMercados = [];
+  renderMercadoStaging();
+  document.getElementById('legMercadoGeral').value='';
+  document.getElementById('legMercadoAposta').value='';
+  document.getElementById('legEntidadeApostada').value='';
   segSet('legResultado','Green');
+  renderLegList();
+  toast('Partida confirmada no bilhete.');
 });
 
 function resetFormAposta(){
@@ -2622,7 +2808,11 @@ function resetFormAposta(){
   segSet('legResultado','Green');
   document.getElementById('legMercadoGeral').value='';
   document.getElementById('legMercadoAposta').value='';
-  currentLegs = [{esporte:'⚽ Futebol', tipo:'Estatística de Jogo', campeonato:'', partida:'', momento:'Pré-live', mercadoGeralId:null, mercadoApostaId:null, resultado:'Green'}];
+  document.getElementById('legEntidadeApostada').value='';
+  updateLegEntidadeVisibility();
+  currentMercados = [];
+  renderMercadoStaging();
+  currentLegs = [];
   renderLegList();
   segSet('segValorTipo','Saldo da Banca'); document.getElementById('creditoHelper').style.display='none';
   segSet('segBilhete','Simples');
@@ -2638,7 +2828,7 @@ function openApostaModal(id){
     document.getElementById('apostaCasa').value = a.casaId;
     document.getElementById('apostaValor').value = a.valor;
     document.getElementById('apostaOdd').value = a.odd;
-    currentLegs = getLegs(a).map(l=>({...l}));
+    currentLegs = getLegs(a).map(l=>({...l, mercados:(l.mercados||[]).map(m=>({...m}))}));
     renderLegList();
     segSet('segValorTipo', a.valorTipo);
     document.getElementById('creditoHelper').style.display = a.valorTipo==='Créditos Grátis'?'block':'none';
