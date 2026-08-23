@@ -349,6 +349,22 @@ tbody tr:last-child td{border-bottom:none;}
 .modal-actions{display:flex;gap:10px;margin-top:18px;}
 .modal-actions .btn{flex:1;justify-content:center;}
 .helper-text{font-size:11px;color:var(--gray-dim);margin-top:4px;line-height:1.4;}
+.leg-box{
+  border:1px solid var(--line2); border-radius:12px; padding:14px;
+  background:rgba(255,255,255,.02); margin-bottom:14px;
+}
+.leg-box-title{
+  font-family:var(--font-display); font-size:16px; letter-spacing:.5px;
+  color:var(--white); margin-bottom:10px;
+}
+.chip.leg-red{border-color:var(--red-dim);color:#ff8b91;}
+.chip.leg-amber{border-color:#6b511f;color:var(--amber);}
+.chip.leg-gray{border-color:var(--line2);color:var(--gray);}
+.bilhete-status-box{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--card2); border:1px solid var(--line2); border-radius:10px; padding:10px 14px;
+}
+.bilhete-status-box label{margin-bottom:0;}
 
 .toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;}
 .toast{background:#151515;border:1px solid var(--red-dim);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:toastin .2s ease;}
@@ -492,6 +508,7 @@ tbody tr:last-child td{border-bottom:none;}
 </head>
 <body>
 
+
 <div id="lockScreen">
   <div class="lock-bg-glow"></div>
   <div class="lock-box">
@@ -608,13 +625,13 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="helper-text">* mês em andamento (ainda não fechado)</div>
       </div>
       <div class="chart-card">
-        <h4>Lucro por Esporte</h4>
+        <h4>Green vs Red por Esporte</h4>
         <div class="chart-wrap"><canvas id="chartEsporte"></canvas></div>
       </div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Lucro por Tipo de Aposta</h4>
+        <h4>Green vs Red por Estatística</h4>
         <div class="chart-wrap"><canvas id="chartTipoAposta"></canvas></div>
       </div>
       <div class="chart-card">
@@ -624,17 +641,17 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Lucro por Mercado Geral</h4>
+        <h4>Green vs Red por Mercado</h4>
         <div class="chart-wrap"><canvas id="chartMercadoGeral"></canvas></div>
       </div>
       <div class="chart-card">
-        <h4>Lucro por Mercado da Aposta</h4>
+        <h4>Green vs Red por Mercado Apostado</h4>
         <div class="chart-wrap"><canvas id="chartMercadoAposta"></canvas></div>
       </div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Lucro por Momento (Pré-live/Live)</h4>
+        <h4>Green vs Red por Tipo de Aposta (Pré-live/Live)</h4>
         <div class="chart-wrap"><canvas id="chartMomento"></canvas></div>
       </div>
       <div class="chart-card">
@@ -858,7 +875,17 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="field"><label>Casa de Aposta</label><select id="apostaCasa" required></select></div>
       </div>
       <div class="field">
-        <label>Esporte + Tipo de Aposta (por jogo do bilhete)</label>
+        <label>Bilhete</label>
+        <div class="seg" id="segBilhete">
+          <button type="button" data-v="Simples" class="active">Simples</button>
+          <button type="button" data-v="Dupla">Dupla</button>
+          <button type="button" data-v="Tripla">Tripla</button>
+          <button type="button" data-v="Múltipla">Múltipla</button>
+        </div>
+      </div>
+
+      <div class="leg-box">
+        <div class="leg-box-title">Mercados do Bilhete</div>
         <div class="field-row">
           <select id="legEsporte">
             <option value="⚽ Futebol">⚽ Futebol</option>
@@ -877,7 +904,7 @@ tbody tr:last-child td{border-bottom:none;}
           <input type="text" id="legPartida" placeholder="Partida (ex: Flamengo x Vasco)">
         </div>
         <div class="field" style="margin-top:8px;">
-          <label>Momento da Aposta</label>
+          <label>Tipo de Aposta</label>
           <div class="seg" id="legMomento">
             <button type="button" data-v="Pré-live" class="active">Pré-live</button>
             <button type="button" data-v="Live">Live</button>
@@ -885,34 +912,39 @@ tbody tr:last-child td{border-bottom:none;}
         </div>
         <div class="field-row" style="margin-top:8px;">
           <div class="field">
-            <label>Mercado Geral</label>
+            <label>Mercado</label>
             <div style="display:flex;gap:6px;">
               <select id="legMercadoGeral" style="flex:1;"><option value="">— Nenhum —</option></select>
-              <button type="button" class="btn btn-sm" id="btnNewMercadoGeral" title="Adicionar novo mercado geral">+</button>
+              <button type="button" class="btn btn-sm" id="btnNewMercadoGeral" title="Adicionar novo mercado">+</button>
             </div>
           </div>
           <div class="field">
-            <label>Mercado da Aposta</label>
+            <label>Mercado Apostado</label>
             <div style="display:flex;gap:6px;">
               <select id="legMercadoAposta" style="flex:1;"><option value="">— Nenhum —</option></select>
-              <button type="button" class="btn btn-sm" id="btnNewMercadoAposta" title="Adicionar novo mercado da aposta">+</button>
+              <button type="button" class="btn btn-sm" id="btnNewMercadoAposta" title="Adicionar novo mercado apostado">+</button>
             </div>
           </div>
         </div>
-        <div class="helper-text" style="margin:-2px 0 4px;">Toque no <b>+</b> pra cadastrar um mercado novo na hora, ou gerencie tudo na aba <b>Bancas</b>.</div>
-        <button type="button" class="btn btn-sm" id="btnAddLeg" style="margin-top:8px;">+ Adicionar ao bilhete</button>
-        <div class="filter-chips" id="legList" style="margin-top:10px;"></div>
-        <div class="helper-text">Bilhete com mais de um jogo? Preencha esporte, tipo, campeonato/partida, momento e mercado de cada jogo e adicione separadamente — todo mundo pode ser diferente por jogo. Só o "Bilhete" abaixo vale pro bilhete inteiro.</div>
-      </div>
-      <div class="field">
-        <label>Bilhete</label>
-        <div class="seg" id="segBilhete">
-          <button type="button" data-v="Simples" class="active">Simples</button>
-          <button type="button" data-v="Dupla">Dupla</button>
-          <button type="button" data-v="Tripla">Tripla</button>
-          <button type="button" data-v="Múltipla">Múltipla</button>
+        <div class="field" style="margin-top:8px;">
+          <label>Resultado deste mercado</label>
+          <div class="seg" id="legResultado">
+            <button type="button" data-v="Green" class="active gain">Green</button>
+            <button type="button" data-v="Red">Red</button>
+            <button type="button" data-v="Reembolso">Reembolso</button>
+            <button type="button" data-v="Pendente">Pendente</button>
+          </div>
+          <div class="helper-text">O que não marcar fica como Green por padrão. Se um mercado do bilhete der Red, o bilhete inteiro conta como Red automaticamente.</div>
         </div>
+        <button type="button" class="btn btn-sm btn-primary" id="btnAddLeg" style="margin-top:10px;">+ Adicionar ao bilhete</button>
+        <div class="filter-chips" id="legList" style="margin-top:10px;"></div>
       </div>
+
+      <div class="field bilhete-status-box">
+        <label>Status do Bilhete (calculado automaticamente)</label>
+        <div id="bilheteStatusDisplay"></div>
+      </div>
+
       <div class="field">
         <label>Origem do Valor</label>
         <div class="seg" id="segValorTipo">
@@ -922,17 +954,8 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="helper-text" id="creditoHelper" style="display:none;">Crédito grátis: no Green, retorna apenas o lucro (valor × (odd-1)), sem devolver o valor da stake.</div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Valor Apostado (R$)</label><input type="number" step="0.01" min="0" id="apostaValor" required></div>
-        <div class="field"><label>Odd do Bilhete</label><input type="number" step="0.0001" min="1" id="apostaOdd" placeholder="ex: 2.55 ou 1.5547" required></div>
-      </div>
-      <div class="field">
-        <label>Status</label>
-        <div class="seg" id="segStatusAposta">
-          <button type="button" data-v="Green" class="active gain">Green</button>
-          <button type="button" data-v="Red">Red</button>
-          <button type="button" data-v="Reembolso">Reembolso</button>
-          <button type="button" data-v="Pendente">Pendente</button>
-        </div>
+        <div class="field"><label>Valor Apostado (R$)</label><input type="number" step="0.001" min="0" id="apostaValor" required></div>
+        <div class="field"><label>Odd do Bilhete</label><input type="number" step="0.0001" min="1" id="apostaOdd" placeholder="ex: 2.550 ou 1.5547" required></div>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="closeModal('modalAposta')">Cancelar</button>
@@ -1032,6 +1055,7 @@ tbody tr:last-child td{border-bottom:none;}
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
+
 
 
 
@@ -1501,6 +1525,44 @@ function renderBarProfit(canvasId, labels, values){
       responsive:true, maintainAspectRatio:false,
       layout:{padding:{top:10}},
       plugins:{ legend:{display:false}, datalabels: barLabelPlugin() },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ font:{weight:'700', size:11}, autoSkip:false, maxRotation:20 } },
+        y:{ display:false }
+      }
+    }
+  });
+}
+
+// Conta quantas vezes cada valor (esporte, mercado, etc.) apareceu como Green vs Red,
+// olhando o resultado de cada mercado (perna) individualmente, sem misturar com R$.
+function greenRedCounts(listEsp, getValueFn){
+  const counts = {};
+  listEsp.forEach(a=>{
+    getLegs(a).forEach(l=>{
+      const key = getValueFn(l);
+      if(!counts[key]) counts[key] = {green:0, red:0};
+      if(l.resultado==='Green') counts[key].green++;
+      else if(l.resultado==='Red') counts[key].red++;
+    });
+  });
+  return counts;
+}
+function renderGreenRedChart(canvasId, counts){
+  const labels = Object.keys(counts);
+  const greens = labels.map(k=>counts[k].green);
+  const reds = labels.map(k=>counts[k].red);
+  upsertChart(canvasId, {
+    type:'bar',
+    data:{ labels: labels.length?labels:['Sem dados'], datasets:[
+      { label:'Green', data: greens.length?greens:[0], backgroundColor:COLOR_GREEN_SOFT, borderColor:COLOR_GREEN, borderWidth:1.5, borderRadius:6, maxBarThickness:40,
+        datalabels:{ display:true, color:'#fff', font:{weight:'bold', size:11}, anchor:'center', align:'center', formatter:v=>v===0?'':v } },
+      { label:'Red', data: reds.length?reds:[0], backgroundColor:COLOR_RED_SOFT, borderColor:COLOR_RED, borderWidth:1.5, borderRadius:6, maxBarThickness:40,
+        datalabels:{ display:true, color:'#fff', font:{weight:'bold', size:11}, anchor:'center', align:'center', formatter:v=>v===0?'':v } }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:10}},
+      plugins:{ legend:{position:'bottom'} },
       scales:{
         x:{ grid:{display:false}, ticks:{ font:{weight:'700', size:11}, autoSkip:false, maxRotation:20 } },
         y:{ display:false }
@@ -2110,12 +2172,12 @@ const REPORT_CHART_LIST = [
   ['chartEvolEsportiva','Evolução da Banca (Esportiva)'],
   ['chartTADiariaEsportiva','TA Diária vs Meta (Esportiva)'],
   ['chartTAMensalEsportiva','TA Mensal — Esportiva'],
-  ['chartEsporte','Lucro por Esporte'],
-  ['chartTipoAposta','Lucro por Tipo de Aposta'],
+  ['chartEsporte','Green vs Red por Esporte'],
+  ['chartTipoAposta','Green vs Red por Estatística'],
   ['chartStatusEsportiva','Green / Red / Reembolso'],
-  ['chartMercadoGeral','Lucro por Mercado Geral'],
-  ['chartMercadoAposta','Lucro por Mercado da Aposta'],
-  ['chartMomento','Lucro por Momento (Pré-live/Live)'],
+  ['chartMercadoGeral','Green vs Red por Mercado'],
+  ['chartMercadoAposta','Green vs Red por Mercado Apostado'],
+  ['chartMomento','Green vs Red por Tipo de Aposta (Pré-live/Live)'],
   ['chartBilhete','Lucro por Bilhete'],
   ['chartEvolOB','Evolução da Banca (OB)'],
   ['chartTADiariaOB','TA Diária vs Meta (OB)'],
@@ -2249,26 +2311,22 @@ function renderAll(){
   renderEvolChart('chartEvolEsportiva', round2(es.inicial), eventsEsp, COLOR_WHITE);
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
-  const bySport = {};
-  listEsp.forEach(a=>{ const es=[...new Set(getLegs(a).map(l=>l.esporte))]; const share=profitAposta(a)/(es.length||1); es.forEach(esp=>{ bySport[esp]=(bySport[esp]||0)+share; }); });
-  renderBarProfit('chartEsporte', Object.keys(bySport), Object.values(bySport));
-  const byTipoAposta = {};
-  listEsp.forEach(a=>{ const ts=[...new Set(getLegs(a).map(l=>l.tipo))]; const share=profitAposta(a)/(ts.length||1); ts.forEach(tp=>{ byTipoAposta[tp]=(byTipoAposta[tp]||0)+share; }); });
-  renderBarProfit('chartTipoAposta', Object.keys(byTipoAposta), Object.values(byTipoAposta));
+  const gcEsporte = greenRedCounts(listEsp, l=>l.esporte);
+  renderGreenRedChart('chartEsporte', gcEsporte);
+  const gcTipo = greenRedCounts(listEsp, l=>l.tipo);
+  renderGreenRedChart('chartTipoAposta', gcTipo);
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
-  const byMercadoGeral = {};
-  listEsp.forEach(a=>{ const vs=[...new Set(getLegs(a).map(l=>mercadoGeralNome(l.mercadoGeralId)))]; const share=profitAposta(a)/(vs.length||1); vs.forEach(nm=>{ byMercadoGeral[nm]=(byMercadoGeral[nm]||0)+share; }); });
-  renderBarProfit('chartMercadoGeral', Object.keys(byMercadoGeral), Object.values(byMercadoGeral));
-  const byMercadoAposta = {};
-  listEsp.forEach(a=>{ const vs=[...new Set(getLegs(a).map(l=>mercadoApostaNome(l.mercadoApostaId)))]; const share=profitAposta(a)/(vs.length||1); vs.forEach(nm=>{ byMercadoAposta[nm]=(byMercadoAposta[nm]||0)+share; }); });
-  renderBarProfit('chartMercadoAposta', Object.keys(byMercadoAposta), Object.values(byMercadoAposta));
-  const byMomento = {};
-  listEsp.forEach(a=>{ const vs=[...new Set(getLegs(a).map(l=>l.momento||'Não informado'))]; const share=profitAposta(a)/(vs.length||1); vs.forEach(nm=>{ byMomento[nm]=(byMomento[nm]||0)+share; }); });
-  renderBarProfit('chartMomento', Object.keys(byMomento), Object.values(byMomento));
+  const gcMercadoGeral = greenRedCounts(listEsp, l=>mercadoGeralNome(l.mercadoGeralId));
+  renderGreenRedChart('chartMercadoGeral', gcMercadoGeral);
+  const gcMercadoAposta = greenRedCounts(listEsp, l=>mercadoApostaNome(l.mercadoApostaId));
+  renderGreenRedChart('chartMercadoAposta', gcMercadoAposta);
+  const gcMomento = greenRedCounts(listEsp, l=>l.momento||'Não informado');
+  renderGreenRedChart('chartMomento', gcMomento);
   const byBilhete = {};
   listEsp.forEach(a=>{ const nm = a.bilhete || 'Não informado'; byBilhete[nm]=(byBilhete[nm]||0)+profitAposta(a); });
   renderBarProfit('chartBilhete', Object.keys(byBilhete), Object.values(byBilhete));
+
 
   // ---- Charts: OB ----
   const listOB = filteredBinarias();
@@ -2418,42 +2476,61 @@ function getLegs(a){
       });
     }
   }
-  // Compatibilidade: registros antigos guardavam momento/mercado no nível do bilhete inteiro.
+  // Compatibilidade: registros antigos guardavam momento/mercado/resultado no nível do bilhete inteiro.
   return legs.map(l=>({
     ...l,
     momento: l.momento!==undefined ? l.momento : a.momento,
     mercadoGeralId: l.mercadoGeralId!==undefined ? l.mercadoGeralId : a.mercadoGeralId,
-    mercadoApostaId: l.mercadoApostaId!==undefined ? l.mercadoApostaId : a.mercadoApostaId
+    mercadoApostaId: l.mercadoApostaId!==undefined ? l.mercadoApostaId : a.mercadoApostaId,
+    resultado: l.resultado!==undefined ? l.resultado : (a.status || 'Green')
   }));
 }
 
 segBind('segValorTipo', (v)=>{ document.getElementById('creditoHelper').style.display = v==='Créditos Grátis' ? 'block':'none'; });
-segBind('segStatusAposta');
 segBind('segTipoOB'); segBind('segStatusOB');
 segBind('segTipoBonus');
 segBind('segTipoMov');
 segBind('legMomento');
+segBind('legResultado');
 segBind('segBilhete');
 
 /* ---------- APOSTA ---------- */
+function deriveBilheteStatus(legs){
+  if(!legs || legs.length===0) return 'Green';
+  if(legs.some(l=>l.resultado==='Red')) return 'Red';
+  if(legs.some(l=>l.resultado==='Pendente')) return 'Pendente';
+  if(legs.every(l=>l.resultado==='Reembolso')) return 'Reembolso';
+  return 'Green';
+}
+function renderBilheteStatusDisplay(){
+  const el = document.getElementById('bilheteStatusDisplay');
+  if(!el) return;
+  const status = deriveBilheteStatus(currentLegs);
+  el.innerHTML = statusBadge(status);
+}
+
 let currentLegs = [];
 function renderLegList(){
   const el = document.getElementById('legList');
   if(currentLegs.length===0){
-    el.innerHTML = `<span class="helper-text">Nenhum jogo adicionado ainda.</span>`;
-    return;
-  }
-  el.innerHTML = currentLegs.map((l,i)=>{
-    const mg = mercadoGeralNome(l.mercadoGeralId), ma = mercadoApostaNome(l.mercadoApostaId);
-    const detalhe = [l.partida, l.campeonato, l.momento, mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ');
-    return `<span class="chip">${l.esporte} — ${l.tipo}${detalhe?` (${detalhe})`:''}<button type="button" data-i="${i}" class="legRemove">✕</button></span>`;
-  }).join('');
-  el.querySelectorAll('.legRemove').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      currentLegs.splice(parseInt(btn.dataset.i,10), 1);
-      renderLegList();
+    el.innerHTML = `<span class="helper-text">Nenhum mercado adicionado ainda.</span>`;
+  } else {
+    const resultClass = { Red:'leg-red', Reembolso:'leg-amber', Pendente:'leg-gray' };
+    el.innerHTML = currentLegs.map((l,i)=>{
+      const mg = mercadoGeralNome(l.mercadoGeralId), ma = mercadoApostaNome(l.mercadoApostaId);
+      const detalhe = [l.partida, l.campeonato, l.momento, mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ');
+      const resultTag = l.resultado && l.resultado!=='Green' ? ` — ${l.resultado}` : '';
+      const cls = resultClass[l.resultado] || '';
+      return `<span class="chip ${cls}">${l.esporte} — ${l.tipo}${detalhe?` (${detalhe})`:''}${resultTag}<button type="button" data-i="${i}" class="legRemove">✕</button></span>`;
+    }).join('');
+    el.querySelectorAll('.legRemove').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        currentLegs.splice(parseInt(btn.dataset.i,10), 1);
+        renderLegList();
+      });
     });
-  });
+  }
+  renderBilheteStatusDisplay();
 }
 function addMercadoInline(tipo){
   const label = tipo==='geral' ? 'mercado geral' : 'mercado da aposta';
@@ -2482,12 +2559,14 @@ document.getElementById('btnAddLeg').addEventListener('click', ()=>{
   const momento = segValue('legMomento');
   const mercadoGeralId = document.getElementById('legMercadoGeral').value || null;
   const mercadoApostaId = document.getElementById('legMercadoAposta').value || null;
+  const resultado = segValue('legResultado');
   if(currentLegs.some(l=>l.esporte===esporte && l.tipo===tipo && (l.campeonato||'')===campeonato && (l.partida||'')===partida
-      && l.momento===momento && (l.mercadoGeralId||null)===mercadoGeralId && (l.mercadoApostaId||null)===mercadoApostaId)){
-    toast('Essa combinação já foi adicionada.'); return;
+      && l.momento===momento && (l.mercadoGeralId||null)===mercadoGeralId && (l.mercadoApostaId||null)===mercadoApostaId && l.resultado===resultado)){
+    toast('Esse mercado já foi adicionado.'); return;
   }
-  currentLegs.push({esporte, tipo, campeonato, partida, momento, mercadoGeralId, mercadoApostaId});
+  currentLegs.push({esporte, tipo, campeonato, partida, momento, mercadoGeralId, mercadoApostaId, resultado});
   renderLegList();
+  segSet('legResultado','Green');
 });
 
 function resetFormAposta(){
@@ -2498,12 +2577,12 @@ function resetFormAposta(){
   document.getElementById('legCampeonato').value='';
   document.getElementById('legPartida').value='';
   segSet('legMomento','Pré-live');
+  segSet('legResultado','Green');
   document.getElementById('legMercadoGeral').value='';
   document.getElementById('legMercadoAposta').value='';
-  currentLegs = [{esporte:'⚽ Futebol', tipo:'Estatística de Jogo', campeonato:'', partida:'', momento:'Pré-live', mercadoGeralId:null, mercadoApostaId:null}];
+  currentLegs = [{esporte:'⚽ Futebol', tipo:'Estatística de Jogo', campeonato:'', partida:'', momento:'Pré-live', mercadoGeralId:null, mercadoApostaId:null, resultado:'Green'}];
   renderLegList();
   segSet('segValorTipo','Saldo da Banca'); document.getElementById('creditoHelper').style.display='none';
-  segSet('segStatusAposta','Green');
   segSet('segBilhete','Simples');
 }
 function openApostaModal(id){
@@ -2521,14 +2600,13 @@ function openApostaModal(id){
     renderLegList();
     segSet('segValorTipo', a.valorTipo);
     document.getElementById('creditoHelper').style.display = a.valorTipo==='Créditos Grátis'?'block':'none';
-    segSet('segStatusAposta', a.status);
     segSet('segBilhete', a.bilhete || 'Simples');
   }
   openModal('modalAposta');
 }
 document.getElementById('formAposta').addEventListener('submit', e=>{
   e.preventDefault();
-  if(currentLegs.length===0){ toast('Adicione ao menos um esporte + tipo de aposta ao bilhete.'); return; }
+  if(currentLegs.length===0){ toast('Adicione ao menos um mercado ao bilhete.'); return; }
   const id = document.getElementById('apostaId').value;
   const rec = {
     id: id || uid(),
@@ -2541,7 +2619,7 @@ document.getElementById('formAposta').addEventListener('submit', e=>{
     valorTipo: segValue('segValorTipo'),
     valor: parseFloat(document.getElementById('apostaValor').value)||0,
     odd: parseFloat(document.getElementById('apostaOdd').value)||1,
-    status: segValue('segStatusAposta')
+    status: deriveBilheteStatus(currentLegs)
   };
   if(id){ const i = DB.apostas.findIndex(x=>x.id===id); DB.apostas[i]=rec; toast('Aposta atualizada.'); }
   else { DB.apostas.push(rec); toast('Aposta registrada.'); }
