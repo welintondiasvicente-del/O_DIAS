@@ -214,6 +214,26 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .chart-card h4{font-family:var(--font-display);font-size:15px;letter-spacing:1px;color:var(--gray);margin-bottom:8px;text-transform:uppercase;}
 .chart-wrap{position:relative;height:260px;}
 .chart-wrap.tall{height:320px;}
+.rank-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:2px;}
+.rank-row{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:9px 10px;}
+.rank-badge{flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:var(--bg2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;color:var(--white);}
+.rank-badge.top1{background:rgba(217,164,65,.18);border-color:var(--amber);color:var(--amber);}
+.rank-badge.top2{background:rgba(156,156,156,.15);border-color:#bdbdbd;color:#e2e2e2;}
+.rank-badge.top3{background:rgba(180,110,50,.18);border-color:#b46e32;color:#e0a87a;}
+.rank-body{flex:1;min-width:0;}
+.rank-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.rank-name{font-weight:700;font-size:12.5px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-stats{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+.rank-ta{font-family:var(--font-display);font-size:14px;color:var(--white);}
+.rank-trend{font-size:12px;font-weight:800;}
+.rank-trend.up{color:var(--green);}
+.rank-trend.down{color:#ff5b64;}
+.rank-trend.same{color:var(--gray-dim);}
+.rank-bar-bg{height:6px;border-radius:4px;background:var(--bg2);margin-top:6px;overflow:hidden;}
+.rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));border-radius:4px;}
+.rank-sub{margin-top:5px;font-size:10.5px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-counts{font-size:10.5px;color:var(--gray);white-space:nowrap;}
+.rank-counts b.g{color:var(--green);} .rank-counts b.r{color:#ff5b64;}
 
 /* ---------- META ---------- */
 .meta-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
@@ -656,8 +676,8 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Green vs Red por Estatística</h4>
-        <div class="chart-wrap"><canvas id="chartTipoAposta"></canvas></div>
+        <h4>Ranking — Estatística (por Taxa de Acerto)</h4>
+        <div class="rank-list" id="rankTipoAposta"></div>
       </div>
       <div class="chart-card">
         <h4>Green / Red / Reembolso</h4>
@@ -666,19 +686,26 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
-        <h4>Green vs Red por Mercado</h4>
-        <div class="chart-wrap"><canvas id="chartMercadoGeral"></canvas></div>
+        <h4>Ranking — Mercado (por Taxa de Acerto)</h4>
+        <div class="rank-list" id="rankMercadoGeral"></div>
       </div>
       <div class="chart-card">
-        <h4>Green vs Red por Mercado Apostado</h4>
-        <div class="chart-wrap"><canvas id="chartMercadoAposta"></canvas></div>
+        <h4>Ranking — Mercado Apostado (por Taxa de Acerto)</h4>
+        <div class="rank-list" id="rankMercadoAposta"></div>
       </div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
+        <h4>Ranking — Time / Jogador Apostado</h4>
+        <div class="rank-list" id="rankEntidade"></div>
+        <div class="helper-text">Critério: % de acerto → mais Greens → menos Reds → mais partidas jogadas.</div>
+      </div>
+      <div class="chart-card">
         <h4>Green vs Red por Tipo de Aposta (Pré-live/Live)</h4>
         <div class="chart-wrap"><canvas id="chartMomento"></canvas></div>
       </div>
+    </div>
+    <div class="charts-grid two-even">
       <div class="chart-card">
         <h4>Lucro por Bilhete</h4>
         <div class="chart-wrap"><canvas id="chartBilhete"></canvas></div>
@@ -1597,6 +1624,93 @@ function greenRedCountsByMercado(listEsp, getValueFn){
   });
   return counts;
 }
+// Ordena chaves de counts {key:{green,red}} pelo critério:
+// 1) % de acerto desc  2) mais Greens desc  3) menos Reds (asc)  4) mais partidas jogadas desc
+function rankEntries(counts){
+  return Object.keys(counts).map(k=>{
+    const c = counts[k];
+    const total = c.green + c.red;
+    const ta = total ? (c.green/total*100) : 0;
+    return { nome:k, green:c.green, red:c.red, total, ta, markets:c.markets||null };
+  }).filter(r=>r.total>0).sort((a,b)=>{
+    if(b.ta !== a.ta) return b.ta - a.ta;
+    if(b.green !== a.green) return b.green - a.green;
+    if(a.red !== b.red) return a.red - b.red;
+    return b.total - a.total;
+  });
+}
+// Renderiza lista tipo "classificação" com badge de posição, barra de % de acerto e seta de tendência
+// (compara com o ranking salvo da última vez que essa lista foi renderizada, guardado no localStorage).
+function renderRankingList(containerId, counts, opts){
+  opts = opts || {};
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const entries = rankEntries(counts);
+  if(entries.length===0){ el.innerHTML = '<div class="helper-text">Sem dados para exibir.</div>'; return; }
+
+  const histKey = 'rankHist_'+containerId;
+  let prevRank = {};
+  try{ prevRank = JSON.parse(localStorage.getItem(histKey) || '{}'); }catch(e){ prevRank = {}; }
+
+  el.innerHTML = entries.map((r,i)=>{
+    const pos = i+1;
+    const badgeCls = pos===1?'top1':pos===2?'top2':pos===3?'top3':'';
+    const prevPos = prevRank[r.nome];
+    let trendHtml = '<span class="rank-trend same">–</span>';
+    if(prevPos!==undefined && prevPos!==pos){
+      if(prevPos > pos) trendHtml = '<span class="rank-trend up">▲ '+(prevPos-pos)+'</span>';
+      else trendHtml = '<span class="rank-trend down">▼ '+(pos-prevPos)+'</span>';
+    } else if(prevPos===undefined){
+      trendHtml = '<span class="rank-trend up">novo</span>';
+    }
+    let subHtml = '';
+    if(opts.showMarkets && r.markets){
+      const topMkts = Object.keys(r.markets).map(mk=>({mk, ...r.markets[mk]}))
+        .sort((a,b)=> (b.green-b.red) - (a.green-a.red)).slice(0,3)
+        .map(m=> m.mk + ' (' + (m.green?('🟢'+m.green):'') + (m.green&&m.red?' ':'') + (m.red?('🔴'+m.red):'') + ')').join(' · ');
+      if(topMkts) subHtml = '<div class="rank-sub">Mercados: '+topMkts+'</div>';
+    }
+    return `<div class="rank-row">
+      <div class="rank-badge ${badgeCls}">${pos}</div>
+      <div class="rank-body">
+        <div class="rank-top">
+          <div class="rank-name">${r.nome}</div>
+          <div class="rank-stats">
+            <span class="rank-counts"><b class="g">${r.green}G</b> · <b class="r">${r.red}R</b></span>
+            <span class="rank-ta">${r.ta.toFixed(0)}%</span>
+            ${trendHtml}
+          </div>
+        </div>
+        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${r.ta}%;"></div></div>
+        ${subHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  const newRank = {};
+  entries.forEach((r,i)=>{ newRank[r.nome] = i+1; });
+  try{ localStorage.setItem(histKey, JSON.stringify(newRank)); }catch(e){}
+}
+// Agrupa por Time/Jogador apostado (m.entidade) incluindo detalhamento por mercado,
+// para responder "quem mais acerta e em quais mercados".
+function greenRedCountsByEntidade(listEsp){
+  const counts = {};
+  listEsp.forEach(a=>{
+    getLegs(a).forEach(l=>{
+      (l.mercados||[]).forEach(m=>{
+        const nome = (m.entidade||'').trim();
+        if(!nome) return;
+        if(!counts[nome]) counts[nome] = {green:0, red:0, markets:{}};
+        const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
+        const mkLabel = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ') || 'Mercado';
+        if(!counts[nome].markets[mkLabel]) counts[nome].markets[mkLabel] = {green:0, red:0};
+        if(m.resultado==='Green'){ counts[nome].green++; counts[nome].markets[mkLabel].green++; }
+        else if(m.resultado==='Red'){ counts[nome].red++; counts[nome].markets[mkLabel].red++; }
+      });
+    });
+  });
+  return counts;
+}
 function renderGreenRedChart(canvasId, counts){
   const labels = Object.keys(counts);
   const greens = labels.map(k=>counts[k].green);
@@ -2257,10 +2371,7 @@ const REPORT_CHART_LIST = [
   ['chartTADiariaEsportiva','TA Diária vs Meta (Esportiva)'],
   ['chartTAMensalEsportiva','TA Mensal — Esportiva'],
   ['chartEsporte','Green vs Red por Esporte'],
-  ['chartTipoAposta','Green vs Red por Estatística'],
   ['chartStatusEsportiva','Green / Red / Reembolso'],
-  ['chartMercadoGeral','Green vs Red por Mercado'],
-  ['chartMercadoAposta','Green vs Red por Mercado Apostado'],
   ['chartMomento','Green vs Red por Tipo de Aposta (Pré-live/Live)'],
   ['chartBilhete','Lucro por Bilhete'],
   ['chartEvolOB','Evolução da Banca (OB)'],
@@ -2399,13 +2510,15 @@ function renderAll(){
   const gcEsporte = greenRedCountsByLeg(listEsp, l=>l.esporte);
   renderGreenRedChart('chartEsporte', gcEsporte);
   const gcTipo = greenRedCountsByLeg(listEsp, l=>l.tipo);
-  renderGreenRedChart('chartTipoAposta', gcTipo);
+  renderRankingList('rankTipoAposta', gcTipo);
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
   const gcMercadoGeral = greenRedCountsByMercado(listEsp, m=>mercadoGeralNome(m.mercadoGeralId));
-  renderGreenRedChart('chartMercadoGeral', gcMercadoGeral);
+  renderRankingList('rankMercadoGeral', gcMercadoGeral);
   const gcMercadoAposta = greenRedCountsByMercado(listEsp, m=>mercadoApostaNome(m.mercadoApostaId));
-  renderGreenRedChart('chartMercadoAposta', gcMercadoAposta);
+  renderRankingList('rankMercadoAposta', gcMercadoAposta);
+  const gcEntidade = greenRedCountsByEntidade(listEsp);
+  renderRankingList('rankEntidade', gcEntidade, {showMarkets:true});
   const gcMomento = greenRedCountsByLeg(listEsp, l=>l.momento||'Não informado');
   renderGreenRedChart('chartMomento', gcMomento);
   const byBilhete = {};
