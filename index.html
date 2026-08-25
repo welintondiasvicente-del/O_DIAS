@@ -274,6 +274,8 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
   padding:14px;margin-bottom:14px;display:none;gap:12px;flex-wrap:wrap;
 }
 .filter-panel.open{display:flex;}
+.filter-global-badge{background:rgba(227,6,19,.12);border:1px solid var(--red-dim);color:#ff8087;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.filter-global-badge button{background:none;border:1px solid var(--red-dim);color:#ff8087;border-radius:7px;padding:4px 9px;font-size:11px;font-weight:700;}
 .filter-field{display:flex;flex-direction:column;gap:5px;min-width:140px;}
 .filter-field label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gray-dim);font-weight:700;}
 .filter-field select,.filter-field input{
@@ -616,8 +618,11 @@ tbody tr:last-child td{border-bottom:none;}
   <!-- =================== PRINCIPAL =================== -->
   <section class="tab-panel active" id="tab-principal">
     <div class="section-title">Visão Geral<div class="rule"></div>
+      <button class="btn btn-ghost btn-sm" id="btnToggleFilterGlobal">🔍 Filtros</button>
       <button class="btn btn-ghost btn-sm" id="btnToggleValues">👁️ Ocultar valores</button>
     </div>
+    <div class="filter-panel" id="filterGlobal"></div>
+    <div id="filterGlobalBadge"></div>
     <div id="metaHero"></div>
     <div class="kpi-grid" id="kpiGeral"></div>
 
@@ -841,6 +846,18 @@ tbody tr:last-child td{border-bottom:none;}
       </div>
     </div>
 
+    <div class="section-title">Campeonatos<div class="rule"></div></div>
+    <div class="card" style="margin-bottom:24px;">
+      <p class="helper-text" style="margin-bottom:12px;">
+        Campeonatos salvos aqui ficam sugeridos automaticamente ao registrar uma nova aposta.
+      </p>
+      <div class="banca-grid" id="gridCampeonatos" style="margin-bottom:14px;"></div>
+      <div class="add-banca-form">
+        <input type="text" name="nome" id="novoCampeonatoNome" placeholder="Nome do campeonato (ex: Brasileirão Série A)">
+        <button class="btn btn-primary" id="btnAddCampeonato">+ Adicionar</button>
+      </div>
+    </div>
+
     <div class="section-title">Depósitos e Saques<div class="rule"></div></div>
     <div class="card" style="margin-bottom:24px;">
       <p class="helper-text" style="margin-bottom:12px;">
@@ -955,9 +972,17 @@ tbody tr:last-child td{border-bottom:none;}
           </select>
         </div>
         <div class="field-row" style="margin-top:8px;">
-          <input type="text" id="legCampeonato" placeholder="Campeonato (ex: Brasileirão Série A)">
+          <div class="field" style="flex:1;">
+            <label>Campeonato</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="legCampeonato" list="legCampeonatoList" placeholder="Campeonato (ex: Brasileirão Série A)" style="flex:1;">
+              <datalist id="legCampeonatoList"></datalist>
+              <button type="button" class="btn btn-sm" id="btnSaveCampeonato" title="Salvar este campeonato para reutilizar depois">💾</button>
+            </div>
+          </div>
           <input type="text" id="legPartida" placeholder="Partida (ex: Flamengo x Vasco)">
         </div>
+        <div id="campeonatoChips" class="filter-chips" style="margin-top:6px;"></div>
         <div class="field" style="margin-top:8px;">
           <label>Tipo de Aposta</label>
           <div class="seg" id="legMomento">
@@ -1217,6 +1242,7 @@ function defaultDB(){
     movimentacoes: [],
     mercadosGerais: [],
     mercadosApostas: [],
+    campeonatos: [],
     metaTA: 65
   };
 }
@@ -1754,13 +1780,44 @@ function renderDoughnutStatus(canvasId, labels, values, colorArr){
    FILTERS
 ============================================================ */
 const filters = {
+  global: { dataIni:'', dataFim:'', esporte:[], casa:[], statusEsp:[], valorTipo:[], tipoAposta:[], plataforma:[], tipoOB:[], statusOB:[] },
   esportiva: { dataIni:'', dataFim:'', esporte:[], casa:[], status:[], valorTipo:[], tipoAposta:[] },
   ob: { dataIni:'', dataFim:'', plataforma:[], tipo:[], status:[] }
 };
 
+// Filtro-mestre da aba Principal: se aplicado, vale para TODAS as abas (Principal, Esportiva, OB, Relatório).
+function globalFilterActive(){
+  const f = filters.global;
+  return !!(f.dataIni || f.dataFim || f.esporte.length || f.casa.length || f.statusEsp.length || f.valorTipo.length || f.tipoAposta.length || f.plataforma.length || f.tipoOB.length || f.statusOB.length);
+}
+function globalApostas(){
+  const f = filters.global;
+  return DB.apostas.filter(a=>{
+    if(f.dataIni && a.data < f.dataIni) return false;
+    if(f.dataFim && a.data > f.dataFim) return false;
+    if(f.esporte.length && !getLegs(a).some(l=>f.esporte.includes(l.esporte))) return false;
+    if(f.casa.length && !f.casa.includes(a.casaId)) return false;
+    if(f.statusEsp.length && !f.statusEsp.includes(a.status)) return false;
+    if(f.valorTipo.length && !f.valorTipo.includes(a.valorTipo)) return false;
+    if(f.tipoAposta.length && !getLegs(a).some(l=>f.tipoAposta.includes(l.tipo))) return false;
+    return true;
+  });
+}
+function globalBinarias(){
+  const f = filters.global;
+  return DB.binarias.filter(b=>{
+    if(f.dataIni && b.data < f.dataIni) return false;
+    if(f.dataFim && b.data > f.dataFim) return false;
+    if(f.plataforma.length && !f.plataforma.includes(b.plataformaId)) return false;
+    if(f.tipoOB.length && !f.tipoOB.includes(b.tipo)) return false;
+    if(f.statusOB.length && !f.statusOB.includes(b.status)) return false;
+    return true;
+  });
+}
+
 function filteredApostas(){
   const f = filters.esportiva;
-  return DB.apostas.filter(a=>{
+  return globalApostas().filter(a=>{
     if(f.dataIni && a.data < f.dataIni) return false;
     if(f.dataFim && a.data > f.dataFim) return false;
     if(f.esporte.length && !getLegs(a).some(l=>f.esporte.includes(l.esporte))) return false;
@@ -1773,7 +1830,7 @@ function filteredApostas(){
 }
 function filteredBinarias(){
   const f = filters.ob;
-  return DB.binarias.filter(b=>{
+  return globalBinarias().filter(b=>{
     if(f.dataIni && b.data < f.dataIni) return false;
     if(f.dataFim && b.data > f.dataFim) return false;
     if(f.plataforma.length && !f.plataforma.includes(b.plataformaId)) return false;
@@ -1789,6 +1846,42 @@ function buildMultiOptions(select, items, selectedArr){
 
 function renderFilterPanel(containerId, kind){
   const el = document.getElementById(containerId);
+  if(kind==='global'){
+    el.innerHTML = `
+      <div class="filter-field"><label>De</label><input type="date" id="fGlbDataIni" value="${filters.global.dataIni}"></div>
+      <div class="filter-field"><label>Até</label><input type="date" id="fGlbDataFim" value="${filters.global.dataFim}"></div>
+      <div class="filter-field"><label>Esporte</label><select multiple id="fGlbEsporte"></select></div>
+      <div class="filter-field"><label>Tipo de Aposta</label><select multiple id="fGlbTipoAposta"></select></div>
+      <div class="filter-field"><label>Casa</label><select multiple id="fGlbCasa"></select></div>
+      <div class="filter-field"><label>Status (Esportiva)</label><select multiple id="fGlbStatusEsp"></select></div>
+      <div class="filter-field"><label>Origem</label><select multiple id="fGlbValorTipo"></select></div>
+      <div class="filter-field"><label>Plataforma (OB)</label><select multiple id="fGlbPlataforma"></select></div>
+      <div class="filter-field"><label>Tipo (OB)</label><select multiple id="fGlbTipoOB"></select></div>
+      <div class="filter-field"><label>Status (OB)</label><select multiple id="fGlbStatusOB"></select></div>
+      <div class="filter-actions"><button class="btn btn-sm" id="fGlbLimpar">Limpar filtros</button></div>
+    `;
+    buildMultiOptions(document.getElementById('fGlbEsporte'), ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei'].map(v=>({value:v,label:v})), filters.global.esporte);
+    buildMultiOptions(document.getElementById('fGlbTipoAposta'), ['Estatística de Jogo','Estatística de Jogador','Estatística de Equipe Individual'].map(v=>({value:v,label:v})), filters.global.tipoAposta);
+    buildMultiOptions(document.getElementById('fGlbCasa'), DB.casas.map(c=>({value:c.id,label:c.nome})), filters.global.casa);
+    buildMultiOptions(document.getElementById('fGlbStatusEsp'), ['Green','Red','Reembolso','Pendente'].map(v=>({value:v,label:v})), filters.global.statusEsp);
+    buildMultiOptions(document.getElementById('fGlbValorTipo'), ['Saldo da Banca','Créditos Grátis'].map(v=>({value:v,label:v})), filters.global.valorTipo);
+    buildMultiOptions(document.getElementById('fGlbPlataforma'), DB.plataformas.map(p=>({value:p.id,label:p.nome})), filters.global.plataforma);
+    buildMultiOptions(document.getElementById('fGlbTipoOB'), ['CALL','PUT'].map(v=>({value:v,label:v})), filters.global.tipoOB);
+    buildMultiOptions(document.getElementById('fGlbStatusOB'), ['GAIN','LOSS','REEMBOLSO'].map(v=>({value:v,label:v})), filters.global.statusOB);
+    const bind = (id,key)=>document.getElementById(id).addEventListener('change', e=>{
+      filters.global[key] = Array.from(e.target.selectedOptions).map(o=>o.value);
+      renderAll();
+    });
+    document.getElementById('fGlbDataIni').addEventListener('change', e=>{ filters.global.dataIni=e.target.value; renderAll(); });
+    document.getElementById('fGlbDataFim').addEventListener('change', e=>{ filters.global.dataFim=e.target.value; renderAll(); });
+    bind('fGlbEsporte','esporte'); bind('fGlbTipoAposta','tipoAposta'); bind('fGlbCasa','casa'); bind('fGlbStatusEsp','statusEsp');
+    bind('fGlbValorTipo','valorTipo'); bind('fGlbPlataforma','plataforma'); bind('fGlbTipoOB','tipoOB'); bind('fGlbStatusOB','statusOB');
+    document.getElementById('fGlbLimpar').addEventListener('click', ()=>{
+      filters.global = { dataIni:'', dataFim:'', esporte:[], casa:[], statusEsp:[], valorTipo:[], tipoAposta:[], plataforma:[], tipoOB:[], statusOB:[] };
+      renderAll();
+    });
+    return;
+  }
   if(kind==='esportiva'){
     el.innerHTML = `
       <div class="filter-field"><label>De</label><input type="date" id="fEspDataIni" value="${filters.esportiva.dataIni}"></div>
@@ -1841,6 +1934,22 @@ function renderFilterPanel(containerId, kind){
       renderAll();
     });
   }
+}
+function renderFilterGlobalBadge(){
+  const el = document.getElementById('filterGlobalBadge');
+  if(!el) return;
+  if(!globalFilterActive()){ el.innerHTML=''; return; }
+  const f = filters.global;
+  let periodo = '';
+  if(f.dataIni || f.dataFim) periodo = ' · Período: '+(f.dataIni||'…')+' até '+(f.dataFim||'…');
+  el.innerHTML = `<div class="filter-global-badge">
+    <span>🔍 Filtro ativo${periodo} — aplicado em todas as abas.</span>
+    <button id="fGlbBadgeLimpar">Limpar filtro</button>
+  </div>`;
+  document.getElementById('fGlbBadgeLimpar').addEventListener('click', ()=>{
+    filters.global = { dataIni:'', dataFim:'', esporte:[], casa:[], statusEsp:[], valorTipo:[], tipoAposta:[], plataforma:[], tipoOB:[], statusOB:[] };
+    renderAll();
+  });
 }
 
 /* ============================================================
@@ -2015,7 +2124,7 @@ let valuesHidden = localStorage.getItem('odias_hide_values')==='1';
 function maskMoney(str){ return valuesHidden ? '••••••' : str; }
 
 function computeTAGeral(){
-  const apostas = DB.apostas, bins = DB.binarias;
+  const apostas = globalApostas(), bins = globalBinarias();
   const gWin = apostas.filter(a=>a.status==='Green').length + bins.filter(b=>b.status==='GAIN').length;
   const gLoss = apostas.filter(a=>a.status==='Red').length + bins.filter(b=>b.status==='LOSS').length;
   return taFrom({win:gWin, loss:gLoss});
@@ -2028,10 +2137,10 @@ function renderMetaHero(){
   if(diff>=0){ tier='gold'; sticker='🏆'; msg='Meta batida! Mandou bem.'; }
   else if(diff>=-10){ tier='hot'; sticker='🔥'; msg='Quase lá, continue assim!'; }
   else { tier='cold'; sticker='💪'; msg='Foco total pra virar o jogo.'; }
-  const greenEsp = DB.apostas.filter(a=>a.status==='Green').length;
-  const redEsp = DB.apostas.filter(a=>a.status==='Red').length;
-  const gainOB = DB.binarias.filter(b=>b.status==='GAIN').length;
-  const lossOB = DB.binarias.filter(b=>b.status==='LOSS').length;
+  const greenEsp = globalApostas().filter(a=>a.status==='Green').length;
+  const redEsp = globalApostas().filter(a=>a.status==='Red').length;
+  const gainOB = globalBinarias().filter(b=>b.status==='GAIN').length;
+  const lossOB = globalBinarias().filter(b=>b.status==='LOSS').length;
   document.getElementById('metaHero').innerHTML = `
     <div class="meta-hero tier-${tier}">
       <div class="meta-hero-top">
@@ -2064,13 +2173,14 @@ function renderKPIGeral(){
   const atual = round2(es.atual+ob.atual);
   const lucro = round2(atual-inicial);
   const roi = inicial>0 ? round2(lucro/inicial*100) : 0;
-  const apostas = DB.apostas, bins = DB.binarias;
+  const apostas = globalApostas(), bins = globalBinarias();
+  const filtroLabel = globalFilterActive() ? ' (filtrado)' : '';
   document.getElementById('kpiGeral').innerHTML = [
     kpiCard('Banca Inicial (Geral)', maskMoney(fmtBRL(inicial)), null, '', '🏦'),
     kpiCard('Banca Atual (Geral)', maskMoney(fmtBRL(atual)), null, '', '💰'),
     kpiCard('Lucro / Prejuízo', maskMoney(fmtBRL(lucro)), null, lucro>=0?'pos':'neg', lucro>=0?'📈':'📉'),
     kpiCard('ROI Geral', roi.toFixed(1)+'%', null, roi>=0?'pos':'neg', '📊'),
-    kpiCard('Total de Registros', apostas.length+bins.length, apostas.length+' esportivas · '+bins.length+' OB', '', '🧾')
+    kpiCard('Total de Registros'+filtroLabel, apostas.length+bins.length, apostas.length+' esportivas · '+bins.length+' OB', '', '🧾')
   ].join('');
 }
 
@@ -2128,10 +2238,12 @@ function renderKPIBonus(){
    RELATÓRIO — AGGREGATIONS ("pente fino")
 ============================================================ */
 function combinedProfitEvents(){
+  const gf = filters.global;
+  const inGlobalDateRange = (d)=> (!gf.dataIni || d>=gf.dataIni) && (!gf.dataFim || d<=gf.dataFim);
   return [
-    ...DB.apostas.map(a=>({data:a.data, delta:profitAposta(a)})),
-    ...DB.bonus.filter(b=>b.tipoBonus==='Giros Grátis').map(b=>({data:b.data, delta:Number(b.valorGanho||0)})),
-    ...DB.binarias.map(b=>({data:b.data, delta:profitBinaria(b)}))
+    ...globalApostas().map(a=>({data:a.data, delta:profitAposta(a)})),
+    ...DB.bonus.filter(b=>b.tipoBonus==='Giros Grátis' && inGlobalDateRange(b.data)).map(b=>({data:b.data, delta:Number(b.valorGanho||0)})),
+    ...globalBinarias().map(b=>({data:b.data, delta:profitBinaria(b)}))
   ];
 }
 function bestWorstBucket(events, period){
@@ -2145,7 +2257,7 @@ function bestWorstBucket(events, period){
 
 function resumoCasas(){
   return DB.casas.map(c=>{
-    const list = DB.apostas.filter(a=>a.casaId===c.id);
+    const list = globalApostas().filter(a=>a.casaId===c.id);
     const counts = apostaCounts(list);
     const ta = taFrom({win:counts.win, loss:counts.loss});
     const mov = movimentacoesSum('casa', c.id);
@@ -2155,7 +2267,7 @@ function resumoCasas(){
 }
 function resumoPlataformas(){
   return DB.plataformas.map(p=>{
-    const list = DB.binarias.filter(b=>b.plataformaId===p.id);
+    const list = globalBinarias().filter(b=>b.plataformaId===p.id);
     const counts = binariaCounts(list);
     const ta = taFrom({win:counts.win, loss:counts.loss});
     const mov = movimentacoesSum('plataforma', p.id);
@@ -2165,7 +2277,7 @@ function resumoPlataformas(){
 }
 function resumoEsporte(){
   const grupos = {};
-  DB.apostas.forEach(a=>{
+  globalApostas().forEach(a=>{
     const esportesUnicos = [...new Set(getLegs(a).map(l=>l.esporte))];
     const share = round2(profitAposta(a) / (esportesUnicos.length||1));
     esportesUnicos.forEach(esp=>{
@@ -2185,7 +2297,7 @@ function resumoEsporte(){
 }
 function resumoTipoAposta(){
   const grupos = {};
-  DB.apostas.forEach(a=>{
+  globalApostas().forEach(a=>{
     const tiposUnicos = [...new Set(getLegs(a).map(l=>l.tipo))];
     const share = round2(profitAposta(a) / (tiposUnicos.length||1));
     tiposUnicos.forEach(tp=>{
@@ -2205,7 +2317,7 @@ function resumoTipoAposta(){
 }
 function resumoEntidades(){
   const grupos = {};
-  DB.apostas.forEach(a=>{
+  globalApostas().forEach(a=>{
     getLegs(a).forEach(l=>{
       (l.mercados||[]).forEach(m=>{
         const nome = (m.entidade||'').trim();
@@ -2227,7 +2339,7 @@ function resumoEntidades(){
 }
 function resumoCallPut(){
   const grupos = { CALL:[], PUT:[] };
-  DB.binarias.forEach(b=>{ if(grupos[b.tipo]) grupos[b.tipo].push(b); });
+  globalBinarias().forEach(b=>{ if(grupos[b.tipo]) grupos[b.tipo].push(b); });
   return Object.keys(grupos).map(tp=>{
     const list = grupos[tp]; const counts = binariaCounts(list);
     const ta = taFrom({win:counts.win, loss:counts.loss});
@@ -2239,12 +2351,12 @@ function resumoMensal(){
   const currentMonthKey = localDateStr(new Date()).slice(0,7);
   const meses = {};
   const touch = (m)=>{ meses[m] = meses[m] || { apostas:0, ob:0, lucroEsp:0, lucroOB:0, win:0, loss:0 }; return meses[m]; };
-  DB.apostas.forEach(a=>{
+  globalApostas().forEach(a=>{
     const m = a.data.slice(0,7); const b = touch(m);
     b.apostas++; b.lucroEsp = round2(b.lucroEsp + profitAposta(a));
     if(a.status==='Green') b.win++; else if(a.status==='Red') b.loss++;
   });
-  DB.binarias.forEach(x=>{
+  globalBinarias().forEach(x=>{
     const m = x.data.slice(0,7); const b = touch(m);
     b.ob++; b.lucroOB = round2(b.lucroOB + profitBinaria(x));
     if(x.status==='GAIN') b.win++; else if(x.status==='LOSS') b.loss++;
@@ -2272,10 +2384,13 @@ function renderRelatorio(){
   const inicial = round2(es.inicial+ob.inicial), atual = round2(es.atual+ob.atual);
   const lucro = round2(es.lucro+ob.lucro);
   const roi = inicial>0 ? round2(lucro/inicial*100) : 0;
-  const totalMovimentado = DB.apostas.reduce((s,a)=>s+Number(a.valor||0),0) + DB.binarias.reduce((s,b)=>s+Number(b.valor||0),0);
-  const yieldGeral = totalMovimentado>0 ? round2(lucro/totalMovimentado*100) : 0;
-  const gWin = DB.apostas.filter(a=>a.status==='Green').length + DB.binarias.filter(b=>b.status==='GAIN').length;
-  const gLoss = DB.apostas.filter(a=>a.status==='Red').length + DB.binarias.filter(b=>b.status==='LOSS').length;
+  const gApostas = globalApostas(), gBins = globalBinarias();
+  const filtroLabel = globalFilterActive() ? ' (filtrado)' : '';
+  const totalMovimentado = gApostas.reduce((s,a)=>s+Number(a.valor||0),0) + gBins.reduce((s,b)=>s+Number(b.valor||0),0);
+  const lucroFiltrado = round2(gApostas.reduce((s,a)=>s+profitAposta(a),0) + gBins.reduce((s,b)=>s+profitBinaria(b),0));
+  const yieldGeral = totalMovimentado>0 ? round2(lucroFiltrado/totalMovimentado*100) : 0;
+  const gWin = gApostas.filter(a=>a.status==='Green').length + gBins.filter(b=>b.status==='GAIN').length;
+  const gLoss = gApostas.filter(a=>a.status==='Red').length + gBins.filter(b=>b.status==='LOSS').length;
   const ta = taFrom({win:gWin, loss:gLoss});
   const totalDepositado = DB.movimentacoes.filter(m=>m.tipo==='Depósito').reduce((s,m)=>s+Number(m.valor||0),0);
   const totalSacado = DB.movimentacoes.filter(m=>m.tipo==='Saque').reduce((s,m)=>s+Number(m.valor||0),0);
@@ -2285,9 +2400,9 @@ function renderRelatorio(){
     kpiCard('Banca Atual (Geral)', fmtBRL(atual)),
     kpiCard('Lucro / Prejuízo Total', fmtBRL(lucro), null, lucro>=0?'pos':'neg'),
     kpiCard('ROI Geral', roi.toFixed(1)+'%', null, roi>=0?'pos':'neg'),
-    kpiCard('Yield Geral', yieldGeral.toFixed(1)+'%', 'sobre '+fmtBRL(totalMovimentado)+' movimentados'),
-    kpiCard('TA Geral', ta.toFixed(1)+'%', (gWin+gLoss)+' decididas · meta '+DB.metaTA+'%', ta>=DB.metaTA?'pos':'neg'),
-    kpiCard('Total de Registros', DB.apostas.length+DB.binarias.length, DB.apostas.length+' esportivas · '+DB.binarias.length+' OB'),
+    kpiCard('Yield'+filtroLabel, yieldGeral.toFixed(1)+'%', 'sobre '+fmtBRL(totalMovimentado)+' movimentados'),
+    kpiCard('TA'+filtroLabel, ta.toFixed(1)+'%', (gWin+gLoss)+' decididas · meta '+DB.metaTA+'%', ta>=DB.metaTA?'pos':'neg'),
+    kpiCard('Total de Registros'+filtroLabel, gApostas.length+gBins.length, gApostas.length+' esportivas · '+gBins.length+' OB'),
     kpiCard('Bônus Recebidos', fmtBRL(DB.bonus.reduce((s,b)=>s+Number(b.valorGanho||0),0))),
     kpiCard('Total Depositado', fmtBRL(totalDepositado)),
     kpiCard('Total Sacado', fmtBRL(totalSacado))
@@ -2464,6 +2579,8 @@ function renderAll(){
   renderKPIBonus();
   renderRelatorio();
 
+  renderFilterPanel('filterGlobal','global');
+  renderFilterGlobalBadge();
   renderFilterPanel('filterEsportiva','esportiva');
   renderFilterPanel('filterOB','ob');
   renderColMenu('colsMenuEsportiva','apostas');
@@ -2481,20 +2598,24 @@ function renderAll(){
 
   // ---- Charts: Principal ----
   const es = totalsEsportiva(), ob = totalsOB();
+  const gf = filters.global;
+  const inGlobalDateRange = (d)=> (!gf.dataIni || d>=gf.dataIni) && (!gf.dataFim || d<=gf.dataFim);
   const eventsGeral = [
-    ...DB.apostas.map(a=>({data:a.data, delta:profitAposta(a)})),
-    ...DB.bonus.filter(b=>b.tipoBonus==='Giros Grátis').map(b=>({data:b.data, delta:Number(b.valorGanho||0)})),
-    ...DB.binarias.map(b=>({data:b.data, delta:profitBinaria(b)})),
-    ...DB.movimentacoes.map(m=>({data:m.data, delta:movDelta(m)}))
+    ...globalApostas().map(a=>({data:a.data, delta:profitAposta(a)})),
+    ...DB.bonus.filter(b=>b.tipoBonus==='Giros Grátis' && inGlobalDateRange(b.data)).map(b=>({data:b.data, delta:Number(b.valorGanho||0)})),
+    ...globalBinarias().map(b=>({data:b.data, delta:profitBinaria(b)})),
+    ...DB.movimentacoes.filter(m=>inGlobalDateRange(m.data)).map(m=>({data:m.data, delta:movDelta(m)}))
   ];
   renderEvolChart('chartEvolGeral', round2(es.inicial+ob.inicial), eventsGeral, COLOR_RED);
-  const taEntriesGeral = combinedTAEntries(DB.apostas, DB.binarias);
+  const taEntriesGeral = combinedTAEntries(globalApostas(), globalBinarias());
   renderTAChart('chartTADiariaGeral', taEntriesGeral, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalGeral', taEntriesGeral, 'aposta', DB.metaTA);
-  renderBarProfit('chartCompararLucro', ['Esportiva','Opções Binárias'], [es.lucro, ob.lucro]);
-  const gCounts = { win: DB.apostas.filter(a=>a.status==='Green').length + DB.binarias.filter(b=>b.status==='GAIN').length,
-    loss: DB.apostas.filter(a=>a.status==='Red').length + DB.binarias.filter(b=>b.status==='LOSS').length,
-    push: DB.apostas.filter(a=>a.status==='Reembolso').length + DB.binarias.filter(b=>b.status==='REEMBOLSO').length };
+  const lucroEspFiltrado = round2(globalApostas().reduce((s,a)=>s+profitAposta(a),0));
+  const lucroObFiltrado = round2(globalBinarias().reduce((s,b)=>s+profitBinaria(b),0));
+  renderBarProfit('chartCompararLucro', ['Esportiva','Opções Binárias'], [lucroEspFiltrado, lucroObFiltrado]);
+  const gCounts = { win: globalApostas().filter(a=>a.status==='Green').length + globalBinarias().filter(b=>b.status==='GAIN').length,
+    loss: globalApostas().filter(a=>a.status==='Red').length + globalBinarias().filter(b=>b.status==='LOSS').length,
+    push: globalApostas().filter(a=>a.status==='Reembolso').length + globalBinarias().filter(b=>b.status==='REEMBOLSO').length };
   renderDoughnutStatus('chartResultadosGeral', ['Green/Gain','Red/Loss','Reembolso'], [gCounts.win,gCounts.loss,gCounts.push], [COLOR_GREEN,COLOR_RED,COLOR_AMBER]);
 
   // ---- Charts: Esportiva ----
@@ -2596,6 +2717,16 @@ function renderMercadosUI(){
       <button class="edit-banca" onclick="App.editMercadoAposta('${m.id}')" title="Renomear">✏️</button>
       <h5>${m.nome}</h5>
     </div>`).join('') : `<div class="empty-state" style="grid-column:1/-1;padding:20px;">Nenhum mercado da aposta cadastrado.</div>`;
+
+  const gridCamp = document.getElementById('gridCampeonatos');
+  if(gridCamp){
+    gridCamp.innerHTML = DB.campeonatos.length ? DB.campeonatos.map(c=>`
+      <div class="banca-card">
+        <button class="del-banca" onclick="App.deleteCampeonato('${c.id}')">✕</button>
+        <button class="edit-banca" onclick="App.editCampeonato('${c.id}')" title="Renomear">✏️</button>
+        <h5>🏆 ${c.nome}</h5>
+      </div>`).join('') : `<div class="empty-state" style="grid-column:1/-1;padding:20px;">Nenhum campeonato salvo ainda.</div>`;
+  }
 }
 
 function refreshSelects(){
@@ -2612,6 +2743,28 @@ function refreshSelects(){
 
   document.getElementById('legMercadoGeral').innerHTML = '<option value="">— Nenhum —</option>' + opts(DB.mercadosGerais);
   document.getElementById('legMercadoAposta').innerHTML = '<option value="">— Nenhum —</option>' + opts(DB.mercadosApostas);
+
+  document.getElementById('legCampeonatoList').innerHTML = DB.campeonatos.map(c=>`<option value="${c.nome}">`).join('');
+  renderCampeonatoChips();
+}
+function renderCampeonatoChips(){
+  const el = document.getElementById('campeonatoChips');
+  if(!el) return;
+  el.innerHTML = DB.campeonatos.length ? DB.campeonatos.map(c=>`
+    <div class="chip" data-nome="${c.nome}" style="cursor:pointer;">
+      <span class="campeonatoPick">🏆 ${c.nome}</span>
+      <button type="button" class="campeonatoDel" data-id="${c.id}">✕</button>
+    </div>`).join('') : '';
+  el.querySelectorAll('.campeonatoPick').forEach(span=>{
+    span.addEventListener('click', ()=>{ document.getElementById('legCampeonato').value = span.closest('.chip').dataset.nome; });
+  });
+  el.querySelectorAll('.campeonatoDel').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      DB.campeonatos = DB.campeonatos.filter(c=>c.id!==btn.dataset.id);
+      saveDB(); refreshSelects();
+    });
+  });
 }
 
 /* ============================================================
@@ -2868,6 +3021,16 @@ function addMercadoInline(tipo){
 }
 document.getElementById('btnNewMercadoGeral').addEventListener('click', ()=>addMercadoInline('geral'));
 document.getElementById('btnNewMercadoAposta').addEventListener('click', ()=>addMercadoInline('aposta'));
+document.getElementById('btnSaveCampeonato').addEventListener('click', ()=>{
+  const nome = document.getElementById('legCampeonato').value.trim();
+  if(!nome){ toast('Digite o nome do campeonato antes de salvar.'); return; }
+  const jaExiste = DB.campeonatos.some(c=>c.nome.toLowerCase()===nome.toLowerCase());
+  if(jaExiste){ toast('Esse campeonato já está salvo.'); return; }
+  DB.campeonatos.push({ id:uid(), nome });
+  saveDB();
+  refreshSelects();
+  toast('Campeonato salvo — vai aparecer sugerido nas próximas apostas.');
+});
 
 document.getElementById('btnAddMercado').addEventListener('click', ()=>{
   const mercadoGeralId = document.getElementById('legMercadoGeral').value || null;
@@ -2900,6 +3063,11 @@ document.getElementById('btnAddLeg').addEventListener('click', ()=>{
     mercados.push({ mercadoGeralId:null, mercadoApostaId:null, resultado:segValue('legResultado'), entidade:pendingEntidade });
   }
   currentLegs.push({ esporte, tipo, campeonato, partida, momento, mercados });
+  if(campeonato && !DB.campeonatos.some(c=>c.nome.toLowerCase()===campeonato.toLowerCase())){
+    DB.campeonatos.push({ id:uid(), nome:campeonato });
+    saveDB();
+    refreshSelects();
+  }
   currentMercados = [];
   renderMercadoStaging();
   document.getElementById('legMercadoGeral').value='';
@@ -3130,7 +3298,9 @@ window.App = {
   deleteMercadoGeral: (id)=>{ if(confirm('Excluir este mercado geral? Registros vinculados permanecerão, mas sem essa referência.')){ DB.mercadosGerais = DB.mercadosGerais.filter(m=>m.id!==id); saveDB(); renderAll(); toast('Mercado excluído.'); } },
   editMercadoGeral: (id)=>{ const m = mercadoGeralById(id); if(!m) return; const val = prompt('Novo nome do mercado geral:', m.nome); if(val===null || !val.trim()) return; m.nome = val.trim(); saveDB(); renderAll(); toast('Mercado atualizado.'); },
   deleteMercadoAposta: (id)=>{ if(confirm('Excluir este mercado da aposta? Registros vinculados permanecerão, mas sem essa referência.')){ DB.mercadosApostas = DB.mercadosApostas.filter(m=>m.id!==id); saveDB(); renderAll(); toast('Mercado excluído.'); } },
-  editMercadoAposta: (id)=>{ const m = mercadoApostaById(id); if(!m) return; const val = prompt('Novo nome do mercado da aposta:', m.nome); if(val===null || !val.trim()) return; m.nome = val.trim(); saveDB(); renderAll(); toast('Mercado atualizado.'); }
+  editMercadoAposta: (id)=>{ const m = mercadoApostaById(id); if(!m) return; const val = prompt('Novo nome do mercado da aposta:', m.nome); if(val===null || !val.trim()) return; m.nome = val.trim(); saveDB(); renderAll(); toast('Mercado atualizado.'); },
+  deleteCampeonato: (id)=>{ if(confirm('Excluir este campeonato salvo? Apostas já registradas não serão afetadas.')){ DB.campeonatos = DB.campeonatos.filter(c=>c.id!==id); saveDB(); renderAll(); toast('Campeonato excluído.'); } },
+  editCampeonato: (id)=>{ const c = DB.campeonatos.find(x=>x.id===id); if(!c) return; const val = prompt('Novo nome do campeonato:', c.nome); if(val===null || !val.trim()) return; c.nome = val.trim(); saveDB(); renderAll(); toast('Campeonato atualizado.'); }
 };
 
 /* ============================================================
@@ -3188,6 +3358,9 @@ document.getElementById('btnNovaOB').addEventListener('click', ()=>openOBModal(n
 document.getElementById('btnNovoBonus').addEventListener('click', ()=>openBonusModal(null));
 document.getElementById('btnNovaMov').addEventListener('click', ()=>openMovModal(null));
 
+document.getElementById('btnToggleFilterGlobal').addEventListener('click', ()=>{
+  document.getElementById('filterGlobal').classList.toggle('open');
+});
 document.getElementById('btnToggleFilterEsportiva').addEventListener('click', ()=>{
   document.getElementById('filterEsportiva').classList.toggle('open');
 });
@@ -3237,6 +3410,14 @@ document.getElementById('btnAddMercadoAposta').addEventListener('click', ()=>{
   DB.mercadosApostas.push({ id:uid(), nome });
   saveDB(); document.getElementById('novoMercadoApostaNome').value='';
   renderAll(); toast('Mercado da aposta adicionado.');
+});
+document.getElementById('btnAddCampeonato').addEventListener('click', ()=>{
+  const nome = document.getElementById('novoCampeonatoNome').value.trim();
+  if(!nome){ toast('Informe o nome do campeonato.'); return; }
+  if(DB.campeonatos.some(c=>c.nome.toLowerCase()===nome.toLowerCase())){ toast('Esse campeonato já está salvo.'); return; }
+  DB.campeonatos.push({ id:uid(), nome });
+  saveDB(); document.getElementById('novoCampeonatoNome').value='';
+  renderAll(); toast('Campeonato adicionado.');
 });
 
 // Meta TA slider lives inside the dynamically-rendered hero card — use delegation.
