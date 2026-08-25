@@ -289,6 +289,14 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .chip button{background:none;border:none;color:var(--red);font-weight:800;font-size:12px;}
 
 /* ---------- TABLE ---------- */
+/* ---------- TABLE (barra de rolagem duplicada no topo) ---------- */
+.table-scroll-top{overflow-x:auto;overflow-y:hidden;height:14px;margin-bottom:6px;border:1px solid var(--line);border-radius:8px;background:var(--card2);}
+.table-scroll-top-inner{height:1px;}
+.table-scroll-top::-webkit-scrollbar{height:10px;}
+.table-scroll-top::-webkit-scrollbar-track{background:var(--card2);border-radius:8px;}
+.table-scroll-top::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px;}
+.table-scroll-top::-webkit-scrollbar-thumb:hover{background:var(--gray-dim);}
+
 .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px;}
 thead th{
@@ -3314,10 +3322,51 @@ function switchTab(name){
   const panel = document.getElementById('tab-'+name);
   if(panel) panel.classList.add('active');
   requestAnimationFrame(forceResizeAllCharts);
+  requestAnimationFrame(syncAllTopScrollbars);
 }
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>switchTab(btn.dataset.tab));
 });
+
+/* ---------- Barra de rolagem espelhada no topo das tabelas ---------- */
+// Cria uma barrinha de scroll horizontal ACIMA de cada tabela larga, sincronizada
+// com a rolagem de baixo, pra não precisar descer até o fim da tabela pra mover os lados.
+function setupTopScrollbars(){
+  document.querySelectorAll('.table-wrap, .report-table-wrap').forEach(wrap=>{
+    if(wrap.dataset.topScrollInit) return;
+    const table = wrap.querySelector('table');
+    if(!table) return;
+    wrap.dataset.topScrollInit = '1';
+
+    const topBar = document.createElement('div');
+    topBar.className = 'table-scroll-top';
+    const inner = document.createElement('div');
+    inner.className = 'table-scroll-top-inner';
+    topBar.appendChild(inner);
+    wrap.parentNode.insertBefore(topBar, wrap);
+
+    let syncing = false;
+    topBar.addEventListener('scroll', ()=>{ if(syncing) return; syncing=true; wrap.scrollLeft = topBar.scrollLeft; syncing=false; });
+    wrap.addEventListener('scroll', ()=>{ if(syncing) return; syncing=true; topBar.scrollLeft = wrap.scrollLeft; syncing=false; });
+
+    wrap._topScrollBar = topBar;
+    wrap._topScrollInner = inner;
+
+    try{
+      new ResizeObserver(()=>{ inner.style.width = table.scrollWidth+'px'; topBar.style.display = table.scrollWidth>wrap.clientWidth ? 'block':'none'; }).observe(table);
+    }catch(e){}
+  });
+  syncAllTopScrollbars();
+}
+function syncAllTopScrollbars(){
+  document.querySelectorAll('.table-wrap, .report-table-wrap').forEach(wrap=>{
+    const table = wrap.querySelector('table');
+    if(!table || !wrap._topScrollInner) return;
+    wrap._topScrollInner.style.width = table.scrollWidth+'px';
+    wrap._topScrollBar.style.display = table.scrollWidth>wrap.clientWidth ? 'block':'none';
+  });
+}
+setupTopScrollbars();
 
 document.getElementById('btnGerarPDF').addEventListener('click', exportRelatorioPDF);
 
