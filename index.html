@@ -396,9 +396,13 @@ tbody tr:last-child td{border-bottom:none;}
 .leg-item-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .mercado-sub-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
 .mercado-sub-item{
-  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  display:flex; flex-direction:column; gap:6px;
   background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:6px 8px;
 }
+.mercado-sub-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.mercado-sub-edit{ display:flex; gap:6px; flex-wrap:wrap; }
+.mercadoTipoSelect{ font-size:10.5px; background:var(--card); border:1px solid var(--line2); color:var(--gray); border-radius:6px; padding:5px 6px; }
+.mercadoEntidadeInput{ flex:1; min-width:110px; font-size:10.5px; background:var(--card); border:1px solid var(--line2); color:var(--white); border-radius:6px; padding:5px 6px; }
 .mercado-sub-label{ font-size:11.5px; color:var(--gray); min-width:0; }
 .leg-item-info{min-width:0;}
 .leg-item-title{font-size:12.5px; font-weight:700; color:var(--white);}
@@ -1029,7 +1033,7 @@ tbody tr:last-child td{border-bottom:none;}
         </div>
         <button type="button" class="btn btn-sm" id="btnAddMercado" style="margin-top:6px;">+ Adicionar Mercado a esta Partida</button>
         <div id="mercadoStagingList" style="margin-top:8px;"></div>
-        <div class="helper-text">Adicione quantos mercados quiser pra essa partida (ex: Finalizações e Escanteios do mesmo jogo). Depois, confirme o jogo no bilhete abaixo.</div>
+        <div class="helper-text">Adicione quantos mercados quiser pra essa partida (ex: Finalizações e Escanteios do mesmo jogo). Se for montar uma dupla/tripla, pode trocar Campeonato/Partida e clicar em "Adicionar Mercado" de novo antes de confirmar — o app separa automaticamente cada jogo diferente. Depois, confirme tudo no bilhete abaixo.</div>
         <button type="button" class="btn btn-sm btn-primary" id="btnAddLeg" style="margin-top:10px;">+ Confirmar Partida no Bilhete</button>
         <div class="helper-text">O que não marcar fica como Green por padrão. Se um mercado do bilhete der Red, o bilhete inteiro conta como Red automaticamente.</div>
         <div id="legList" style="margin-top:12px;"></div>
@@ -2026,9 +2030,11 @@ function renderTableApostas(){
         const mercadosLine = (l.mercados||[]).map(m=>{
           const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
           const label = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ');
-          return `${label||'Mercado'} (${m.resultado})`;
+          const tipoTag = m.tipo ? ' · '+m.tipo.replace('Estatística de ','') : '';
+          const entTag = m.entidade ? ' 🎯'+m.entidade : '';
+          return `${label||'Mercado'} (${m.resultado}${tipoTag}${entTag})`;
         }).join(', ');
-        let html = `${l.esporte} — ${l.tipo}`;
+        let html = `${l.esporte}`;
         if(detalheTop) html += `<br><span style="color:var(--gray-dim);font-size:11px;">${detalheTop}</span>`;
         if(mercadosLine) html += `<br><span style="color:var(--gray-dim);font-size:10.5px;">${mercadosLine}</span>`;
         return html;
@@ -2870,8 +2876,18 @@ segBind('legResultado');
 segBind('segBilhete');
 
 /* ---------- Time/Jogador apostado (visível só para Estatística de Jogador/Equipe) ---------- */
+const TIPO_OPTIONS = ['Estatística de Jogo','Estatística de Jogador','Estatística de Equipe Individual'];
 function tipoUsaEntidade(tipo){
   return tipo === 'Estatística de Jogador' || tipo === 'Estatística de Equipe Individual';
+}
+function tipoSelectHtml(tipoAtual, dataAttrs){
+  return `<select class="mercadoTipoSelect" ${dataAttrs}>` +
+    TIPO_OPTIONS.map(t=>`<option value="${t}" ${t===tipoAtual?'selected':''}>${t.replace('Estatística de ','')}</option>`).join('') +
+    `</select>`;
+}
+function entidadeInputHtml(tipoAtual, entidade, dataAttrs){
+  if(!tipoUsaEntidade(tipoAtual)) return '';
+  return `<input type="text" class="mercadoEntidadeInput" ${dataAttrs} value="${(entidade||'').replace(/"/g,'&quot;')}" placeholder="Time ou jogador apostado">`;
 }
 function updateLegEntidadeVisibility(){
   const tipo = document.getElementById('legTipo').value;
@@ -2918,15 +2934,22 @@ function renderMercadoStaging(){
     const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
     let label = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ') || 'Mercado sem nome';
     if(m.entidade) label += ' — 🎯 ' + m.entidade;
+    const partidaTag = m._partida ? `<div class="rank-sub">⚽ ${m._partida}${m._campeonato?' · '+m._campeonato:''}</div>` : '';
     const miniBtns = opts.map(o=>{
       const active = m.resultado===o.v ? ('active '+o.extra) : '';
       return `<button type="button" data-v="${o.v}" class="${active}">${o.label}</button>`;
     }).join('');
-    return `<div class="leg-item">
-      <div class="leg-item-info"><div class="leg-item-title">${label}</div></div>
-      <div class="leg-item-actions">
-        <div class="mini-seg" data-i="${i}">${miniBtns}</div>
-        <button type="button" class="legRemove" data-i="${i}" title="Remover">✕</button>
+    return `<div class="mercado-sub-item">
+      <div class="mercado-sub-top">
+        <div class="leg-item-info"><div class="leg-item-title">${label}</div>${partidaTag}</div>
+        <div class="leg-item-actions">
+          <div class="mini-seg" data-i="${i}">${miniBtns}</div>
+          <button type="button" class="legRemove" data-i="${i}" title="Remover">✕</button>
+        </div>
+      </div>
+      <div class="mercado-sub-edit">
+        ${tipoSelectHtml(m.tipo, `data-i="${i}"`)}
+        ${entidadeInputHtml(m.tipo, m.entidade, `data-i="${i}"`)}
       </div>
     </div>`;
   }).join('');
@@ -2943,6 +2966,19 @@ function renderMercadoStaging(){
     btn.addEventListener('click', ()=>{
       currentMercados.splice(parseInt(btn.dataset.i,10),1);
       renderMercadoStaging();
+    });
+  });
+  el.querySelectorAll('.mercadoTipoSelect').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const i = parseInt(sel.dataset.i,10);
+      currentMercados[i].tipo = sel.value;
+      if(!tipoUsaEntidade(sel.value)) currentMercados[i].entidade = '';
+      renderMercadoStaging();
+    });
+  });
+  el.querySelectorAll('.mercadoEntidadeInput').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      currentMercados[parseInt(inp.dataset.i,10)].entidade = inp.value.trim();
     });
   });
 }
@@ -2966,19 +3002,28 @@ function renderLegList(){
       const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
       let label = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ') || 'Mercado';
       if(m.entidade) label += ' — 🎯 ' + m.entidade;
+      const tipoAtual = m.tipo || l.tipo || 'Estatística de Jogo';
       const miniBtns = opts.map(o=>{
         const active = m.resultado===o.v ? ('active '+o.extra) : '';
         return `<button type="button" data-v="${o.v}" class="${active}">${o.label}</button>`;
       }).join('');
       return `<div class="mercado-sub-item">
-        <span class="mercado-sub-label">${label}</span>
-        <div class="mini-seg" data-li="${li}" data-mi="${mi}">${miniBtns}</div>
-        <button type="button" class="legRemove mercadoSubRemove" data-li="${li}" data-mi="${mi}" title="Remover mercado">✕</button>
+        <div class="mercado-sub-top">
+          <span class="mercado-sub-label">${label}</span>
+          <div class="leg-item-actions">
+            <div class="mini-seg" data-li="${li}" data-mi="${mi}">${miniBtns}</div>
+            <button type="button" class="legRemove mercadoSubRemove" data-li="${li}" data-mi="${mi}" title="Remover mercado">✕</button>
+          </div>
+        </div>
+        <div class="mercado-sub-edit">
+          ${tipoSelectHtml(tipoAtual, `data-li="${li}" data-mi="${mi}"`)}
+          ${entidadeInputHtml(tipoAtual, m.entidade, `data-li="${li}" data-mi="${mi}"`)}
+        </div>
       </div>`;
     }).join('');
     return `<div class="leg-item leg-item-block">
       <div class="leg-item-header">
-        <div class="leg-item-title">${l.esporte} — ${l.tipo}</div>
+        <div class="leg-item-title">${l.esporte}</div>
         <button type="button" class="legRemove legRemoveWhole" data-li="${li}" title="Remover partida inteira">✕</button>
       </div>
       ${detalheTop?`<div class="leg-item-detail">${detalheTop}</div>`:''}
@@ -3006,6 +3051,20 @@ function renderLegList(){
     btn.addEventListener('click', ()=>{
       currentLegs.splice(parseInt(btn.dataset.li,10),1);
       renderLegList();
+    });
+  });
+  el.querySelectorAll('.mercadoTipoSelect').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      const li = parseInt(sel.dataset.li,10), mi = parseInt(sel.dataset.mi,10);
+      currentLegs[li].mercados[mi].tipo = sel.value;
+      if(!tipoUsaEntidade(sel.value)) currentLegs[li].mercados[mi].entidade = '';
+      renderLegList();
+    });
+  });
+  el.querySelectorAll('.mercadoEntidadeInput').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const li = parseInt(inp.dataset.li,10), mi = parseInt(inp.dataset.mi,10);
+      currentLegs[li].mercados[mi].entidade = inp.value.trim();
     });
   });
   renderBilheteStatusDisplay();
@@ -3046,7 +3105,15 @@ document.getElementById('btnAddMercado').addEventListener('click', ()=>{
   const resultado = segValue('legResultado');
   const entidade = document.getElementById('legEntidadeApostada').value.trim();
   if(!mercadoGeralId && !mercadoApostaId){ toast('Selecione ao menos um mercado (geral ou apostado).'); return; }
-  currentMercados.push({ mercadoGeralId, mercadoApostaId, resultado, entidade });
+  // Guarda "foto" da partida/campeonato atuais junto com o mercado, pra não misturar
+  // jogos diferentes numa dupla/tripla caso o campo Partida seja trocado antes de confirmar.
+  // "tipo" fica salvo POR MERCADO (editável depois), não trava o resto da partida.
+  const _esporte = document.getElementById('legEsporte').value;
+  const tipo = document.getElementById('legTipo').value;
+  const _campeonato = document.getElementById('legCampeonato').value.trim();
+  const _partida = document.getElementById('legPartida').value.trim();
+  const _momento = segValue('legMomento');
+  currentMercados.push({ mercadoGeralId, mercadoApostaId, resultado, entidade, tipo, _esporte, _campeonato, _partida, _momento });
   renderMercadoStaging();
   document.getElementById('legMercadoGeral').value = '';
   document.getElementById('legMercadoAposta').value = '';
@@ -3060,22 +3127,41 @@ document.getElementById('btnAddLeg').addEventListener('click', ()=>{
   const campeonato = document.getElementById('legCampeonato').value.trim();
   const partida = document.getElementById('legPartida').value.trim();
   const momento = segValue('legMomento');
-  let mercados = currentMercados.map(m=>({...m}));
+  let staged = currentMercados.map(m=>({...m}));
   const pendingMG = document.getElementById('legMercadoGeral').value || null;
   const pendingMA = document.getElementById('legMercadoAposta').value || null;
   const pendingEntidade = document.getElementById('legEntidadeApostada').value.trim();
   if(pendingMG || pendingMA){
-    mercados.push({ mercadoGeralId:pendingMG, mercadoApostaId:pendingMA, resultado:segValue('legResultado'), entidade:pendingEntidade });
+    staged.push({ mercadoGeralId:pendingMG, mercadoApostaId:pendingMA, resultado:segValue('legResultado'), entidade:pendingEntidade, tipo,
+      _esporte:esporte, _campeonato:campeonato, _partida:partida, _momento:momento });
   }
-  if(mercados.length===0){
-    mercados.push({ mercadoGeralId:null, mercadoApostaId:null, resultado:segValue('legResultado'), entidade:pendingEntidade });
+  if(staged.length===0){
+    staged.push({ mercadoGeralId:null, mercadoApostaId:null, resultado:segValue('legResultado'), entidade:pendingEntidade, tipo,
+      _esporte:esporte, _campeonato:campeonato, _partida:partida, _momento:momento });
   }
-  currentLegs.push({ esporte, tipo, campeonato, partida, momento, mercados });
-  if(campeonato && !DB.campeonatos.some(c=>c.nome.toLowerCase()===campeonato.toLowerCase())){
-    DB.campeonatos.push({ id:uid(), nome:campeonato });
-    saveDB();
-    refreshSelects();
-  }
+  // Agrupa os mercados pendentes pela "foto" de partida/campeonato/esporte/momento que cada
+  // um tinha no momento em que foi adicionado (SEM incluir "tipo" — assim mercados de tipos
+  // diferentes, ex: Estatística de Jogador + Estatística de Jogo, podem ficar na mesma partida).
+  // Se dois mercados foram adicionados com partidas diferentes (ex: dupla com 2 jogos), isso
+  // cria DUAS partidas no bilhete — em vez de misturar tudo na última partida digitada.
+  const grupos = [];
+  staged.forEach(m=>{
+    const key = [m._esporte, m._campeonato, m._partida, m._momento].join('|||');
+    let grupo = grupos.find(g=>g.key===key);
+    if(!grupo){
+      grupo = { key, esporte:m._esporte, tipo:m.tipo, campeonato:m._campeonato, partida:m._partida, momento:m._momento, mercados:[] };
+      grupos.push(grupo);
+    }
+    grupo.mercados.push({ mercadoGeralId:m.mercadoGeralId, mercadoApostaId:m.mercadoApostaId, resultado:m.resultado, entidade:m.entidade, tipo:m.tipo });
+  });
+  grupos.forEach(g=>{
+    currentLegs.push({ esporte:g.esporte, tipo:g.tipo, campeonato:g.campeonato, partida:g.partida, momento:g.momento, mercados:g.mercados });
+    if(g.campeonato && !DB.campeonatos.some(c=>c.nome.toLowerCase()===g.campeonato.toLowerCase())){
+      DB.campeonatos.push({ id:uid(), nome:g.campeonato });
+    }
+  });
+  saveDB();
+  refreshSelects();
   currentMercados = [];
   renderMercadoStaging();
   document.getElementById('legMercadoGeral').value='';
@@ -3083,7 +3169,7 @@ document.getElementById('btnAddLeg').addEventListener('click', ()=>{
   document.getElementById('legEntidadeApostada').value='';
   segSet('legResultado','Green');
   renderLegList();
-  toast('Partida confirmada no bilhete.');
+  toast(grupos.length>1 ? grupos.length+' partidas diferentes confirmadas no bilhete.' : 'Partida confirmada no bilhete.');
 });
 
 function resetFormAposta(){
