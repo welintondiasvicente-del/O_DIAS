@@ -222,7 +222,7 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .rank-badge.top3{background:rgba(180,110,50,.18);border-color:#b46e32;color:#e0a87a;}
 .rank-body{flex:1;min-width:0;}
 .rank-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.rank-name{font-weight:700;font-size:12.5px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-name{font-weight:700;font-size:12.5px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
 .rank-stats{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
 .rank-ta{font-family:var(--font-display);font-size:14px;color:var(--white);}
 .rank-trend{font-size:12px;font-weight:800;}
@@ -231,7 +231,9 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .rank-trend.same{color:var(--gray-dim);}
 .rank-bar-bg{height:6px;border-radius:4px;background:var(--bg2);margin-top:6px;overflow:hidden;}
 .rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));border-radius:4px;}
-.rank-sub{margin-top:5px;font-size:10.5px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-sub{margin-top:5px;font-size:10.5px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.rank-list{overflow-x:hidden;max-width:100%;}
+.rank-row{max-width:100%;}
 .rank-counts{font-size:10.5px;color:var(--gray);white-space:nowrap;}
 .rank-counts b.g{color:var(--green);} .rank-counts b.r{color:#ff5b64;}
 
@@ -360,7 +362,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
 }
 .modal h3{font-family:var(--font-display);font-size:22px;letter-spacing:1px;margin-bottom:16px;color:var(--white);}
 .modal h3 .accent{color:var(--red);}
-.field{margin-bottom:13px;}
+.field{margin-bottom:13px;min-width:0;}
 .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray-dim);font-weight:700;margin-bottom:5px;}
 .field input,.field select{
   width:100%;background:var(--bg2);border:1px solid var(--line2);color:var(--white);
@@ -993,7 +995,10 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
               <button type="button" class="btn btn-sm" id="btnSaveCampeonato" title="Salvar este campeonato para reutilizar depois">💾</button>
             </div>
           </div>
-          <input type="text" id="legPartida" placeholder="Partida (ex: Flamengo x Vasco)">
+          <div class="field">
+            <label>Partida</label>
+            <input type="text" id="legPartida" placeholder="Ex: Flamengo x Vasco">
+          </div>
         </div>
         <div id="campeonatoChips" class="filter-chips" style="margin-top:6px;"></div>
         <div class="field" style="margin-top:8px;">
@@ -1704,10 +1709,12 @@ function renderRankingList(containerId, counts, opts){
     }
     let subHtml = '';
     if(opts.showMarkets && r.markets){
-      const topMkts = Object.keys(r.markets).map(mk=>({mk, ...r.markets[mk]}))
-        .sort((a,b)=> (b.green-b.red) - (a.green-a.red)).slice(0,3)
-        .map(m=> m.mk + ' (' + (m.green?('🟢'+m.green):'') + (m.green&&m.red?' ':'') + (m.red?('🔴'+m.red):'') + ')').join(' · ');
-      if(topMkts) subHtml = '<div class="rank-sub">Mercados: '+topMkts+'</div>';
+      const allMkts = Object.keys(r.markets).map(mk=>({mk, ...r.markets[mk]}))
+        .sort((a,b)=> (b.green-b.red) - (a.green-a.red));
+      const shown = allMkts.slice(0,1).map(m=> m.mk).join(', ');
+      const restCount = allMkts.length - 1;
+      const restTxt = restCount>0 ? ' +'+restCount+' mercado'+(restCount>1?'s':'') : '';
+      if(shown) subHtml = '<div class="rank-sub" title="'+allMkts.map(m=>m.mk).join(', ')+'">Mercados: '+shown+restTxt+'</div>';
     }
     return `<div class="rank-row">
       <div class="rank-badge ${badgeCls}">${pos}</div>
