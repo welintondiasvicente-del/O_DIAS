@@ -33,7 +33,7 @@
   --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;}
+html,body{height:100%;max-width:100%;overflow-x:hidden;}
 body{
   background:
     radial-gradient(ellipse at 15% 0%, rgba(227,6,19,.10), transparent 45%),
@@ -210,7 +210,7 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .charts-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:18px;}
 .charts-grid.two-even{grid-template-columns:1fr 1fr;}
 @media(max-width:900px){.charts-grid,.charts-grid.two-even{grid-template-columns:1fr;}}
-.chart-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;}
+.chart-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;min-width:0;overflow:hidden;}
 .chart-card h4{font-family:var(--font-display);font-size:15px;letter-spacing:1px;color:var(--gray);margin-bottom:8px;text-transform:uppercase;}
 .chart-wrap{position:relative;height:260px;}
 .chart-wrap.tall{height:320px;}
@@ -234,6 +234,14 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .rank-sub{margin-top:5px;font-size:10.5px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .rank-list{overflow-x:hidden;max-width:100%;}
 .rank-row{max-width:100%;}
+.rank-row.clickable{cursor:pointer;}
+.rank-caret{display:inline-block;font-size:9px;color:var(--gray-dim);transition:transform .2s ease;}
+.rank-row.expanded .rank-caret{transform:rotate(180deg);}
+.rank-detail{display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line2);}
+.rank-row.expanded .rank-detail{display:block;}
+.rank-detail-item{font-size:11px;color:var(--gray);padding:2px 0;white-space:normal;word-break:break-word;}
+.rank-detail-item .g{color:var(--green);}
+.rank-detail-item .r{color:#ff5b64;}
 .rank-counts{font-size:10.5px;color:var(--gray);white-space:nowrap;}
 .rank-counts b.g{color:var(--green);} .rank-counts b.r{color:#ff5b64;}
 
@@ -1708,19 +1716,21 @@ function renderRankingList(containerId, counts, opts){
       trendHtml = '<span class="rank-trend up">novo</span>';
     }
     let subHtml = '';
+    let clickable = false;
     if(opts.showMarkets && r.markets){
       const allMkts = Object.keys(r.markets).map(mk=>({mk, ...r.markets[mk]}))
         .sort((a,b)=> (b.green-b.red) - (a.green-a.red));
-      const shown = allMkts.slice(0,1).map(m=> m.mk).join(', ');
-      const restCount = allMkts.length - 1;
-      const restTxt = restCount>0 ? ' +'+restCount+' mercado'+(restCount>1?'s':'') : '';
-      if(shown) subHtml = '<div class="rank-sub" title="'+allMkts.map(m=>m.mk).join(', ')+'">Mercados: '+shown+restTxt+'</div>';
+      if(allMkts.length){
+        clickable = true;
+        const items = allMkts.map(m=> '<div class="rank-detail-item">'+m.mk+' <span class="g">'+(m.green?('🟢'+m.green):'')+'</span> <span class="r">'+(m.red?('🔴'+m.red):'')+'</span></div>').join('');
+        subHtml = '<div class="rank-detail">'+items+'</div>';
+      }
     }
-    return `<div class="rank-row">
+    return `<div class="rank-row ${clickable?'clickable':''}" ${clickable?'onclick="this.classList.toggle(\'expanded\')"':''}>
       <div class="rank-badge ${badgeCls}">${pos}</div>
       <div class="rank-body">
         <div class="rank-top">
-          <div class="rank-name">${r.nome}</div>
+          <div class="rank-name">${r.nome}${clickable?' <span class="rank-caret">▾</span>':''}</div>
           <div class="rank-stats">
             <span class="rank-counts"><b class="g">${r.green}G</b> · <b class="r">${r.red}R</b></span>
             <span class="rank-ta">${r.ta.toFixed(0)}%</span>
