@@ -233,6 +233,10 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));border-radius:4px;}
 .rank-sub{margin-top:5px;font-size:10.5px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .rank-list{overflow-x:hidden;max-width:100%;}
+.rank-row.rank-hidden-extra{display:none;}
+.rank-list.rank-expanded .rank-row.rank-hidden-extra{display:flex;}
+.rank-more-btn{width:100%;margin-top:2px;padding:9px;background:var(--card2);border:1px solid var(--line2);border-radius:8px;color:var(--gray);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;}
+.rank-more-btn:hover{color:var(--white);border-color:var(--gray-dim);}
 .rank-row{max-width:100%;}
 .rank-row.clickable{cursor:pointer;}
 .rank-caret{display:inline-block;font-size:9px;color:var(--gray-dim);transition:transform .2s ease;}
@@ -537,6 +541,20 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
 .report-highlight .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--gray-dim);font-weight:700;}
 .report-highlight .val{font-family:var(--font-display);font-size:19px;color:var(--white);margin-top:3px;}
 .report-highlight .sub{font-size:11px;color:var(--gray-dim);margin-top:2px;}
+.ia-section-title{font-family:var(--font-display);font-size:16px;letter-spacing:1px;color:var(--white);text-transform:uppercase;margin:22px 0 10px;display:flex;align-items:center;gap:8px;}
+.ia-section-title:first-child{margin-top:0;}
+.ia-card{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+.ia-card.good{border-left:3px solid var(--green);}
+.ia-card.bad{border-left:3px solid #ff5b64;}
+.ia-card.warn{border-left:3px solid var(--amber);}
+.ia-card.info{border-left:3px solid var(--red);}
+.ia-card .ia-title{font-weight:700;color:var(--white);font-size:13px;margin-bottom:4px;}
+.ia-card .ia-body{font-size:12px;color:var(--gray);line-height:1.5;}
+.ia-empty{font-size:12px;color:var(--gray-dim);padding:10px 2px;}
+.ia-streak-banner{display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
+.ia-streak-banner .n{font-family:var(--font-display);font-size:28px;}
+.ia-streak-banner .n.green{color:var(--green);}
+.ia-streak-banner .n.red{color:#ff5b64;}
 
 /* ---------- PRINT / PDF EXPORT ---------- */
 #printReport{ display:none; }
@@ -633,6 +651,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
     <button class="tab-btn" data-tab="bonus">Bônus</button>
     <button class="tab-btn" data-tab="bancas">Bancas</button>
     <button class="tab-btn" data-tab="relatorio">Relatório</button>
+    <button class="tab-btn" data-tab="ia">🤖 IA</button>
   </nav>
 </header>
 
@@ -953,6 +972,18 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
 
     <div class="section-title small">Fechamento Mensal (Geral)<div class="rule"></div></div>
     <div class="report-table-wrap"><table id="tblResumoMensal"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <!-- =================== IA / INSIGHTS =================== -->
+  <section class="tab-panel" id="tab-ia">
+    <div class="section-title">
+      🤖 Análise Inteligente<div class="rule"></div>
+    </div>
+    <div class="helper-text" style="margin-bottom:14px;">
+      Relatório gerado automaticamente com base em regras estatísticas sobre tudo que está registrado no app (Apostas Esportivas + Opções Binárias). Não é um modelo de IA externo — é um motor de análise local, roda 100% no seu navegador, sem enviar dados pra nenhum servidor.
+    </div>
+    <button class="btn btn-primary" id="btnGerarInsights" style="margin-bottom:16px;">🔄 Atualizar Análise</button>
+    <div id="iaReportContent"></div>
   </section>
 
 </div>
@@ -1699,11 +1730,13 @@ function renderRankingList(containerId, counts, opts){
   if(!el) return;
   const entries = rankEntries(counts);
   if(entries.length===0){ el.innerHTML = '<div class="helper-text">Sem dados para exibir.</div>'; return; }
+  const limit = opts.limit || 5;
 
   const histKey = 'rankHist_'+containerId;
   let prevRank = {};
   try{ prevRank = JSON.parse(localStorage.getItem(histKey) || '{}'); }catch(e){ prevRank = {}; }
 
+  el.classList.remove('rank-expanded');
   el.innerHTML = entries.map((r,i)=>{
     const pos = i+1;
     const badgeCls = pos===1?'top1':pos===2?'top2':pos===3?'top3':'';
@@ -1726,7 +1759,8 @@ function renderRankingList(containerId, counts, opts){
         subHtml = '<div class="rank-detail">'+items+'</div>';
       }
     }
-    return `<div class="rank-row ${clickable?'clickable':''}" ${clickable?'onclick="this.classList.toggle(\'expanded\')"':''}>
+    const extraCls = i>=limit ? ' rank-hidden-extra' : '';
+    return `<div class="rank-row ${clickable?'clickable':''}${extraCls}" ${clickable?'onclick="this.classList.toggle(\'expanded\')"':''}>
       <div class="rank-badge ${badgeCls}">${pos}</div>
       <div class="rank-body">
         <div class="rank-top">
@@ -1742,6 +1776,18 @@ function renderRankingList(containerId, counts, opts){
       </div>
     </div>`;
   }).join('');
+  if(entries.length>limit){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'rank-more-btn';
+    const extra = entries.length-limit;
+    btn.textContent = 'Ver mais ('+extra+')';
+    btn.onclick = ()=>{
+      const isOpen = el.classList.toggle('rank-expanded');
+      btn.textContent = isOpen ? 'Ver menos' : 'Ver mais ('+extra+')';
+    };
+    el.appendChild(btn);
+  }
 
   const newRank = {};
   entries.forEach((r,i)=>{ newRank[r.nome] = i+1; });
@@ -1749,6 +1795,23 @@ function renderRankingList(containerId, counts, opts){
 }
 // Agrupa por Time/Jogador apostado (m.entidade) incluindo detalhamento por mercado,
 // para responder "quem mais acerta e em quais mercados".
+function greenRedCountsByTipo(listEsp){
+  const counts = {};
+  listEsp.forEach(a=>{
+    getLegs(a).forEach(l=>{
+      (l.mercados||[]).forEach(m=>{
+        const tipo = m.tipo || l.tipo || 'Estatística de Jogo';
+        if(!counts[tipo]) counts[tipo] = {green:0, red:0, markets:{}};
+        const mg = mercadoGeralNome(m.mercadoGeralId), ma = mercadoApostaNome(m.mercadoApostaId);
+        const mkLabel = [mg!=='—'?mg:null, ma!=='—'?ma:null].filter(Boolean).join(' · ') || 'Mercado';
+        if(!counts[tipo].markets[mkLabel]) counts[tipo].markets[mkLabel] = {green:0, red:0};
+        if(m.resultado==='Green'){ counts[tipo].green++; counts[tipo].markets[mkLabel].green++; }
+        else if(m.resultado==='Red'){ counts[tipo].red++; counts[tipo].markets[mkLabel].red++; }
+      });
+    });
+  });
+  return counts;
+}
 function greenRedCountsByEntidade(listEsp){
   const counts = {};
   listEsp.forEach(a=>{
@@ -2411,6 +2474,138 @@ function reportTableRows(cols, rows){
       : `<tr><td colspan="${cols.length}"><div class="empty-state">Sem dados suficientes.</div></td></tr>`}</tbody>`;
 }
 
+function calcStreak(list, isWin, isLoss){
+  const sorted = [...list].sort((a,b)=> (a.data||'').localeCompare(b.data||''));
+  let streak = 0, type = null;
+  for(let i=sorted.length-1;i>=0;i--){
+    const item = sorted[i];
+    const win = isWin(item), loss = isLoss(item);
+    if(!win && !loss) continue;
+    if(type===null){ type = win?'green':'red'; streak = 1; }
+    else if((win && type==='green') || (loss && type==='red')) streak++;
+    else break;
+  }
+  return { type, streak };
+}
+function generateIAReport(){
+  const el = document.getElementById('iaReportContent');
+  if(!el) return;
+  const apostas = DB.apostas||[];
+  const binarias = DB.binarias||[];
+  const today = todayStr();
+  const apostasHoje = apostas.filter(a=>a.data===today);
+  const binariasHoje = binarias.filter(b=>b.data===today);
+
+  const cEsp = apostaCounts(apostas);
+  const cEspHoje = apostaCounts(apostasHoje);
+  const cOB = binariaCounts(binarias);
+  const cOBHoje = binariaCounts(binariasHoje);
+
+  const lucroEspTotal = round2(apostas.reduce((s,a)=>s+profitAposta(a),0));
+  const lucroEspHoje = round2(apostasHoje.reduce((s,a)=>s+profitAposta(a),0));
+  const lucroOBTotal = round2(binarias.reduce((s,b)=>s+profitBinaria(b),0));
+  const lucroOBHoje = round2(binariasHoje.reduce((s,b)=>s+profitBinaria(b),0));
+  const lucroHojeTotal = round2(lucroEspHoje + lucroOBHoje);
+
+  const apostadoTotal = round2(apostas.filter(a=>a.status!=='Pendente').reduce((s,a)=>s+Number(a.valor||0),0));
+  const taEsp = (cEsp.win+cEsp.loss)>0 ? (cEsp.win/(cEsp.win+cEsp.loss)*100) : 0;
+  const yieldEsp = apostadoTotal>0 ? (lucroEspTotal/apostadoTotal*100) : 0;
+
+  const streakEsp = calcStreak(apostas, a=>a.status==='Green', a=>a.status==='Red');
+
+  const gcMercado = greenRedCountsByMercado(apostas, m=>mercadoGeralNome(m.mercadoGeralId));
+  const rankedMercados = rankEntries(gcMercado);
+  const bons = rankedMercados.filter(r=>r.total>=3 && r.ta>=60).slice(0,3);
+  const ruins = rankedMercados.filter(r=>r.total>=3 && r.ta<45).slice(0,3);
+  const poucosDados = rankedMercados.filter(r=>r.total>0 && r.total<3);
+
+  const callList = binarias.filter(b=>b.tipo==='CALL');
+  const putList = binarias.filter(b=>b.tipo==='PUT');
+  const cCall = binariaCounts(callList), cPut = binariaCounts(putList);
+  const taCall = (cCall.win+cCall.loss)>0?(cCall.win/(cCall.win+cCall.loss)*100):0;
+  const taPut = (cPut.win+cPut.loss)>0?(cPut.win/(cPut.win+cPut.loss)*100):0;
+
+  if(apostas.length===0 && binarias.length===0){
+    el.innerHTML = '<div class="ia-empty">Ainda não há apostas ou operações registradas. Assim que você começar a registrar, a análise aparece aqui.</div>';
+    return;
+  }
+
+  let html = '';
+
+  // ---- Resumo do dia ----
+  html += '<div class="ia-section-title">📅 Resumo de Hoje</div>';
+  if(apostasHoje.length===0 && binariasHoje.length===0){
+    html += '<div class="ia-card"><div class="ia-body">Nenhuma aposta ou operação registrada hoje ainda.</div></div>';
+  } else {
+    html += '<div class="report-highlight-grid">'
+      + '<div class="report-highlight"><div class="lbl">Apostas Hoje</div><div class="val">'+cEspHoje.total+'</div><div class="sub">'+cEspHoje.win+'G · '+cEspHoje.loss+'R · '+cEspHoje.pending+' pend.</div></div>'
+      + '<div class="report-highlight"><div class="lbl">Operações OB Hoje</div><div class="val">'+cOBHoje.total+'</div><div class="sub">'+cOBHoje.win+' gain · '+cOBHoje.loss+' loss</div></div>'
+      + '<div class="report-highlight"><div class="lbl">Resultado do Dia</div><div class="val" style="color:'+(lucroHojeTotal>=0?'var(--green)':'#ff5b64')+';">'+fmtBRL(lucroHojeTotal)+'</div></div>'
+      + '</div>';
+  }
+
+  // ---- Sequência atual ----
+  if(streakEsp.type){
+    html += '<div class="ia-streak-banner">'
+      + '<div class="n '+(streakEsp.type==='green'?'green':'red')+'">'+streakEsp.streak+'</div>'
+      + '<div><b style="color:var(--white);">'+(streakEsp.type==='green'?'Green':'Red')+'s seguidos</b><br><span class="ia-body" style="color:var(--gray);">'+(streakEsp.type==='green' ? (streakEsp.streak>=3?'Boa fase — mantenha a disciplina de stake, não aumente valor por causa da sequência.':'Você está numa sequência positiva.') : (streakEsp.streak>=3?'Considere pausar e revisar os critérios de entrada antes de continuar apostando.':'Sequência negativa recente, fique atento.'))+'</span></div>'
+      + '</div>';
+  }
+
+  // ---- Visão geral ----
+  html += '<div class="ia-section-title">📊 Visão Geral — Apostas Esportivas</div>';
+  html += '<div class="report-highlight-grid">'
+    + '<div class="report-highlight"><div class="lbl">Taxa de Acerto</div><div class="val">'+taEsp.toFixed(1)+'%</div><div class="sub">'+cEsp.win+'G · '+cEsp.loss+'R</div></div>'
+    + '<div class="report-highlight"><div class="lbl">Yield</div><div class="val" style="color:'+(yieldEsp>=0?'var(--green)':'#ff5b64')+';">'+yieldEsp.toFixed(1)+'%</div><div class="sub">sobre '+fmtBRL(apostadoTotal)+' apostados</div></div>'
+    + '<div class="report-highlight"><div class="lbl">Lucro Total</div><div class="val" style="color:'+(lucroEspTotal>=0?'var(--green)':'#ff5b64')+';">'+fmtBRL(lucroEspTotal)+'</div></div>'
+    + '</div>';
+
+  // ---- Pontos fortes ----
+  html += '<div class="ia-section-title">✅ Pontos Fortes</div>';
+  if(bons.length===0){
+    html += '<div class="ia-empty">Ainda não há mercados com volume suficiente (mín. 3 registros) e taxa de acerto ≥60% para destacar.</div>';
+  } else {
+    bons.forEach(r=>{
+      html += '<div class="ia-card good"><div class="ia-title">'+r.nome+' — '+r.ta.toFixed(0)+'% de acerto</div>'
+        + '<div class="ia-body">'+r.green+'G · '+r.red+'R em '+r.total+' registros. Esse mercado está performando bem — considere manter ou aumentar levemente a exposição, respeitando sua gestão de banca.</div></div>';
+    });
+  }
+
+  // ---- Pontos de atenção ----
+  html += '<div class="ia-section-title">⚠️ Pontos de Atenção</div>';
+  if(ruins.length===0){
+    html += '<div class="ia-empty">Nenhum mercado com volume suficiente (mín. 3 registros) e taxa de acerto abaixo de 45% no momento. Bom sinal.</div>';
+  } else {
+    ruins.forEach(r=>{
+      html += '<div class="ia-card bad"><div class="ia-title">'+r.nome+' — '+r.ta.toFixed(0)+'% de acerto</div>'
+        + '<div class="ia-body">'+r.green+'G · '+r.red+'R em '+r.total+' registros. Taxa de acerto baixa — vale revisar os critérios usados nesse mercado ou reduzir o valor apostado até a amostra melhorar.</div></div>';
+    });
+  }
+
+  if(poucosDados.length>0){
+    html += '<div class="ia-card warn"><div class="ia-title">Amostra pequena</div><div class="ia-body">'
+      + poucosDados.map(r=>r.nome+' ('+r.total+' registro'+(r.total>1?'s':'')+')').join(' · ')
+      + ' — ainda é cedo pra tirar conclusões sobre esses mercados. Registre mais entradas antes de decidir manter ou descartar.</div></div>';
+  }
+
+  // ---- Opções Binárias ----
+  if(binarias.length>0){
+    html += '<div class="ia-section-title">📈 Opções Binárias — CALL vs PUT</div>';
+    html += '<div class="report-highlight-grid">'
+      + '<div class="report-highlight"><div class="lbl">CALL</div><div class="val">'+taCall.toFixed(0)+'%</div><div class="sub">'+cCall.win+' gain · '+cCall.loss+' loss</div></div>'
+      + '<div class="report-highlight"><div class="lbl">PUT</div><div class="val">'+taPut.toFixed(0)+'%</div><div class="sub">'+cPut.win+' gain · '+cPut.loss+' loss</div></div>'
+      + '<div class="report-highlight"><div class="lbl">Lucro OB Total</div><div class="val" style="color:'+(lucroOBTotal>=0?'var(--green)':'#ff5b64')+';">'+fmtBRL(lucroOBTotal)+'</div></div>'
+      + '</div>';
+    if(cCall.win+cCall.loss>=3 && cPut.win+cPut.loss>=3 && Math.abs(taCall-taPut)>=15){
+      const melhor = taCall>taPut ? 'CALL' : 'PUT';
+      html += '<div class="ia-card info"><div class="ia-title">Diferença relevante entre CALL e PUT</div><div class="ia-body">Suas operações de '+melhor+' estão performando bem melhor. Vale entender o que muda no seu processo entre os dois tipos.</div></div>';
+    }
+  }
+
+  html += '<div class="helper-text" style="margin-top:16px;">Análise gerada em '+new Date().toLocaleString('pt-BR')+'. Baseada em regras simples de estatística (volume mínimo, taxa de acerto e sequências) — use como apoio, não como recomendação financeira.</div>';
+
+  el.innerHTML = html;
+}
 function renderRelatorio(){
   const es = totalsEsportiva(), ob = totalsOB();
   const inicial = round2(es.inicial+ob.inicial), atual = round2(es.atual+ob.atual);
@@ -2610,6 +2805,7 @@ function renderAll(){
   renderKPIOB();
   renderKPIBonus();
   renderRelatorio();
+  generateIAReport();
 
   renderFilterPanel('filterGlobal','global');
   renderFilterGlobalBadge();
@@ -2662,8 +2858,8 @@ function renderAll(){
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
   const gcEsporte = greenRedCountsByLeg(listEsp, l=>l.esporte);
   renderGreenRedChart('chartEsporte', gcEsporte);
-  const gcTipo = greenRedCountsByLeg(listEsp, l=>l.tipo);
-  renderRankingList('rankTipoAposta', gcTipo);
+  const gcTipo = greenRedCountsByTipo(listEsp);
+  renderRankingList('rankTipoAposta', gcTipo, {showMarkets:true});
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
   const gcMercadoGeral = greenRedCountsByMercado(listEsp, m=>mercadoGeralNome(m.mercadoGeralId));
@@ -3483,6 +3679,7 @@ function syncAllTopScrollbars(){
 setupTopScrollbars();
 
 document.getElementById('btnGerarPDF').addEventListener('click', exportRelatorioPDF);
+document.getElementById('btnGerarInsights').addEventListener('click', generateIAReport);
 
 /* ---------- REGISTRO RÁPIDO (menu flutuante) ---------- */
 document.getElementById('btnQuickAdd').addEventListener('click', (e)=>{
