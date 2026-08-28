@@ -409,6 +409,9 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
 }
 .leg-item-block{ display:block; }
 .leg-item-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.leg-item-edit-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.leg-item-edit-row input{flex:1;min-width:110px;font-size:16px;background:var(--card);border:1px solid var(--line2);color:var(--white);border-radius:6px;padding:6px 8px;}
+.seg-sm button{padding:5px 10px;font-size:11px;}
 .mercado-sub-list{ margin-top:8px; display:flex; flex-direction:column; gap:6px; }
 .mercado-sub-item{
   display:flex; flex-direction:column; gap:6px;
@@ -3207,6 +3210,7 @@ function renderMercadoStaging(){
   });
 }
 
+const LEG_ESPORTE_OPTIONS = ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei'];
 function renderLegList(){
   const el = document.getElementById('legList');
   if(currentLegs.length===0){
@@ -3247,13 +3251,46 @@ function renderLegList(){
     }).join('');
     return `<div class="leg-item leg-item-block">
       <div class="leg-item-header">
-        <div class="leg-item-title">${l.esporte}</div>
+        <select class="legEsporteEdit" data-li="${li}" style="font-size:16px;background:var(--card);border:1px solid var(--line2);color:var(--white);border-radius:6px;padding:5px 6px;flex:1;min-width:0;">
+          ${LEG_ESPORTE_OPTIONS.map(o=>`<option value="${o}" ${l.esporte===o?'selected':''}>${o}</option>`).join('')}
+        </select>
         <button type="button" class="legRemove legRemoveWhole" data-li="${li}" title="Remover partida inteira">✕</button>
       </div>
-      ${detalheTop?`<div class="leg-item-detail">${detalheTop}</div>`:''}
+      <div class="leg-item-edit-row">
+        <input type="text" class="legCampeonatoEdit" data-li="${li}" value="${(l.campeonato||'').replace(/"/g,'&quot;')}" placeholder="Campeonato">
+        <input type="text" class="legPartidaEdit" data-li="${li}" value="${(l.partida||'').replace(/"/g,'&quot;')}" placeholder="Partida">
+      </div>
+      <div class="seg seg-sm legMomentoEdit" data-li="${li}" style="margin-top:6px;">
+        <button type="button" data-v="Pré-live" class="${l.momento==='Live'?'':'active'}">Pré-live</button>
+        <button type="button" data-v="Live" class="${l.momento==='Live'?'active':''}">Live</button>
+      </div>
       <div class="mercado-sub-list">${mercadosHtml}</div>
     </div>`;
   }).join('');
+  el.querySelectorAll('.legEsporteEdit').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      currentLegs[parseInt(sel.dataset.li,10)].esporte = sel.value;
+    });
+  });
+  el.querySelectorAll('.legCampeonatoEdit').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      currentLegs[parseInt(inp.dataset.li,10)].campeonato = inp.value.trim();
+    });
+  });
+  el.querySelectorAll('.legPartidaEdit').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      currentLegs[parseInt(inp.dataset.li,10)].partida = inp.value.trim();
+    });
+  });
+  el.querySelectorAll('.legMomentoEdit').forEach(wrap=>{
+    wrap.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const li = parseInt(wrap.dataset.li,10);
+        currentLegs[li].momento = btn.dataset.v;
+        wrap.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
+      });
+    });
+  });
   el.querySelectorAll('.mini-seg').forEach(wrap=>{
     wrap.querySelectorAll('button').forEach(btn=>{
       btn.addEventListener('click', ()=>{
