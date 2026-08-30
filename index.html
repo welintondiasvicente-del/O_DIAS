@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0f0f0f">
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js');
-  });
-}
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>O DIAS — Gerenciador de Banca</title>
@@ -1509,6 +1500,7 @@ function fmtCompact(v){
   return out;
 }
 function fmtFull(v){
+  if(typeof valuesHidden!=='undefined' && valuesHidden) return '••••';
   const n = Number(v)||0;
   return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
@@ -4240,7 +4232,7 @@ document.getElementById('btnToggleValues').addEventListener('click', ()=>{
   valuesHidden = !valuesHidden;
   localStorage.setItem('odias_hide_values', valuesHidden?'1':'0');
   document.getElementById('btnToggleValues').textContent = valuesHidden ? '🙈 Exibir valores' : '👁️ Ocultar valores';
-  renderKPIGeral();
+  renderAll();
 });
 
 document.getElementById('btnToggleDanger').addEventListener('click', ()=>{
