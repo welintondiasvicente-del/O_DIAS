@@ -237,13 +237,16 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .rank-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .rank-name{font-weight:700;font-size:12.5px;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
 .rank-stats{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
-.rank-ta{font-family:var(--font-display);font-size:14px;color:var(--white);}
 .rank-trend{font-size:12px;font-weight:800;}
 .rank-trend.up{color:var(--green);}
 .rank-trend.down{color:#ff5b64;}
 .rank-trend.same{color:var(--gray-dim);}
 .rank-bar-bg{height:6px;border-radius:4px;background:var(--bg2);margin-top:6px;overflow:hidden;}
 .rank-bar-fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--green));border-radius:4px;}
+.rank-zone{display:inline-block;margin-top:6px;font-size:10.5px;font-weight:800;letter-spacing:.3px;padding:3px 8px;border-radius:6px;}
+.rank-zone.zone-green{background:rgba(46,204,113,.15);color:#3ddc84;border:1px solid rgba(46,204,113,.35);}
+.rank-zone.zone-red{background:rgba(255,91,100,.15);color:#ff5b64;border:1px solid rgba(255,91,100,.35);}
+.rank-zone.zone-yellow{background:rgba(255,193,7,.15);color:#ffc107;border:1px solid rgba(255,193,7,.35);}
 .rank-sub{margin-top:5px;font-size:10.5px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .rank-list{overflow-x:hidden;max-width:100%;}
 .rank-row.rank-hidden-extra{display:none;}
@@ -741,8 +744,8 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
         <div class="helper-text">* mês em andamento (ainda não fechado)</div>
       </div>
       <div class="chart-card">
-        <h4>Green vs Red por Esporte</h4>
-        <div class="chart-wrap"><canvas id="chartEsporte"></canvas></div>
+        <h4>Ranking — Esporte</h4>
+        <div class="rank-list" id="rankEsporte"></div>
       </div>
     </div>
     <div class="charts-grid two-even">
@@ -1746,7 +1749,7 @@ function greenRedCountsByMercado(listEsp, getValueFn){
   return counts;
 }
 // Ordena chaves de counts {key:{green,red}} pelo critério:
-// 1) % de acerto desc  2) mais Greens desc  3) menos Reds (asc)  4) mais partidas jogadas desc
+// 1) mais Greens (desc)  2) menos Reds (asc)  3) ordem alfabética
 function rankEntries(counts){
   return Object.keys(counts).map(k=>{
     const c = counts[k];
@@ -1754,11 +1757,19 @@ function rankEntries(counts){
     const ta = total ? (c.green/total*100) : 0;
     return { nome:k, green:c.green, red:c.red, total, ta, markets:c.markets||null };
   }).filter(r=>r.total>0).sort((a,b)=>{
-    if(b.ta !== a.ta) return b.ta - a.ta;
     if(b.green !== a.green) return b.green - a.green;
     if(a.red !== b.red) return a.red - b.red;
-    return b.total - a.total;
+    return a.nome.localeCompare(b.nome, 'pt-BR');
   });
+}
+// Zona de classificação (para Campeonato / Time / Jogador):
+// G+n (Validado, verde)   = amostra confiável e taxa de acerto alta (total>=3 e ta>=70%)
+// Z+n (Não Validado, vermelho) = amostra com mais Red que Green ou taxa de acerto baixa (total>=2 e ta<=40%)
+// E (Em Teste, amarelo)   = ainda sem amostra suficiente para validar ou invalidar
+function rankZone(r){
+  if(r.total>=3 && r.ta>=70) return {tag:'G'+r.green, label:'Validado', cls:'zone-green'};
+  if(r.total>=2 && r.ta<=40) return {tag:'Z'+r.red, label:'Não Validado', cls:'zone-red'};
+  return {tag:'E', label:'Em Teste', cls:'zone-yellow'};
 }
 // Renderiza lista tipo "classificação" com badge de posição, barra de % de acerto e seta de tendência
 // (compara com o ranking salvo da última vez que essa lista foi renderizada, guardado no localStorage).
@@ -1808,6 +1819,11 @@ function renderRankingList(containerId, counts, opts){
       }
     }
     const extraCls = i>=limit ? ' rank-hidden-extra' : '';
+    let zoneHtml = '';
+    if(opts.showZone){
+      const z = rankZone(r);
+      zoneHtml = `<span class="rank-zone ${z.cls}" title="${z.label}">${z.tag} (${z.label})</span>`;
+    }
     return `<div class="rank-row ${clickable?'clickable':''}${extraCls}" ${clickable?'onclick="this.classList.toggle(\'expanded\')"':''}>
       <div class="rank-badge ${badgeCls}">${pos}</div>
       <div class="rank-body">
@@ -1815,11 +1831,10 @@ function renderRankingList(containerId, counts, opts){
           <div class="rank-name">${r.nome}${clickable?' <span class="rank-caret">▾</span>':''}</div>
           <div class="rank-stats">
             <span class="rank-counts"><b class="g">${r.green}G</b> · <b class="r">${r.red}R</b></span>
-            <span class="rank-ta">${r.ta.toFixed(0)}%</span>
             ${trendHtml}
           </div>
         </div>
-        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${r.ta}%;"></div></div>
+        ${zoneHtml}
         ${subHtml}
       </div>
     </div>`;
@@ -2565,6 +2580,18 @@ function updatePendentesButton(){
     btn.style.display = 'none';
   }
 }
+// Quando o filtro rápido "P" (só Pendente) está ativo e a última aposta pendente é resolvida,
+// limpa o filtro e fecha o painel automaticamente para já mostrar os resultados atualizados.
+function checkPendenteFilterAutoClear(){
+  const isPendenteOnly = filters.esportiva.status.length===1 && filters.esportiva.status[0]==='Pendente';
+  if(!isPendenteOnly) return;
+  const stillPending = (DB.apostas||[]).some(a=>a.status==='Pendente');
+  if(!stillPending){
+    filters.esportiva.status = [];
+    const painel = document.getElementById('filterEsportiva');
+    if(painel) painel.classList.remove('open');
+  }
+}
 function calcStreak(list, isWin, isLoss){
   const sorted = [...list].sort((a,b)=> (a.data||'').localeCompare(b.data||''));
   let streak = 0, type = null;
@@ -2803,7 +2830,6 @@ const REPORT_CHART_LIST = [
   ['chartEvolEsportiva','Evolução da Banca (Esportiva)'],
   ['chartTADiariaEsportiva','TA Diária vs Meta (Esportiva)'],
   ['chartTAMensalEsportiva','TA Mensal — Esportiva'],
-  ['chartEsporte','Green vs Red por Esporte'],
   ['chartStatusEsportiva','Green / Red / Reembolso'],
   ['chartMomento','Green vs Red por Tipo de Aposta (Pré-live/Live)'],
   ['chartBilhete','Lucro por Bilhete'],
@@ -2950,9 +2976,9 @@ function renderAll(){
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
   const gcEsporte = greenRedCountsByLeg(listEsp, l=>l.esporte);
-  renderGreenRedChart('chartEsporte', gcEsporte);
+  renderRankingList('rankEsporte', gcEsporte, {showZone:true});
   const gcTipo = greenRedCountsByTipo(listEsp);
-  renderRankingList('rankTipoAposta', gcTipo, {showMarkets:true});
+  renderRankingList('rankTipoAposta', gcTipo, {showMarkets:true, showZone:true});
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
   const gcMercadoGeral = greenRedCountsByMercado(listEsp, m=>mercadoGeralNome(m.mercadoGeralId));
@@ -2960,11 +2986,11 @@ function renderAll(){
   const gcMercadoAposta = greenRedCountsByMercado(listEsp, m=>mercadoApostaNome(m.mercadoApostaId));
   renderRankingList('rankMercadoAposta', gcMercadoAposta);
   const gcTime = greenRedCountsByEntidade(listEsp, 'Estatística de Equipe Individual');
-  renderRankingList('rankTime', gcTime, {showMarkets:true});
+  renderRankingList('rankTime', gcTime, {showMarkets:true, showZone:true});
   const gcJogador = greenRedCountsByEntidade(listEsp, 'Estatística de Jogador');
-  renderRankingList('rankJogador', gcJogador, {showMarkets:true});
+  renderRankingList('rankJogador', gcJogador, {showMarkets:true, showZone:true});
   const gcCampeonato = greenRedCountsByCampeonato(listEsp);
-  renderRankingList('rankCampeonato', gcCampeonato, {showMarkets:true});
+  renderRankingList('rankCampeonato', gcCampeonato, {showMarkets:true, showZone:true});
   const gcMomento = greenRedCountsByLeg(listEsp, l=>l.momento||'Não informado');
   renderGreenRedChart('chartMomento', gcMomento);
   const byBilhete = {};
@@ -3585,7 +3611,7 @@ document.getElementById('formAposta').addEventListener('submit', e=>{
   };
   if(id){ const i = DB.apostas.findIndex(x=>x.id===id); DB.apostas[i]=rec; toast('Aposta atualizada.'); }
   else { DB.apostas.push(rec); toast('Aposta registrada.'); }
-  saveDB(); closeModal('modalAposta'); renderAll();
+  saveDB(); closeModal('modalAposta'); checkPendenteFilterAutoClear(); renderAll();
 });
 
 /* ---------- OB ---------- */
@@ -3719,7 +3745,7 @@ function toast(msg){
 ============================================================ */
 window.App = {
   editAposta: (id)=>openApostaModal(id),
-  deleteAposta: (id)=>{ if(confirm('Excluir esta aposta?')){ DB.apostas = DB.apostas.filter(a=>a.id!==id); saveDB(); renderAll(); toast('Aposta excluída.'); } },
+  deleteAposta: (id)=>{ if(confirm('Excluir esta aposta?')){ DB.apostas = DB.apostas.filter(a=>a.id!==id); saveDB(); checkPendenteFilterAutoClear(); renderAll(); toast('Aposta excluída.'); } },
   editOB: (id)=>openOBModal(id),
   deleteOB: (id)=>{ if(confirm('Excluir esta operação?')){ DB.binarias = DB.binarias.filter(b=>b.id!==id); saveDB(); renderAll(); toast('Operação excluída.'); } },
   editBonus: (id)=>openBonusModal(id),
