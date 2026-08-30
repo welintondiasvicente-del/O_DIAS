@@ -2976,9 +2976,9 @@ function renderAll(){
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
   const gcEsporte = greenRedCountsByLeg(listEsp, l=>l.esporte);
-  renderRankingList('rankEsporte', gcEsporte, {showZone:true});
+  renderRankingList('rankEsporte', gcEsporte);
   const gcTipo = greenRedCountsByTipo(listEsp);
-  renderRankingList('rankTipoAposta', gcTipo, {showMarkets:true, showZone:true});
+  renderRankingList('rankTipoAposta', gcTipo, {showMarkets:true});
   const cEsp = apostaCounts(listEsp);
   renderDoughnutStatus('chartStatusEsportiva', ['Green','Red','Reembolso','Pendente'], [cEsp.win,cEsp.loss,cEsp.push,cEsp.pending], [COLOR_GREEN,COLOR_RED,COLOR_AMBER,COLOR_GRAY]);
   const gcMercadoGeral = greenRedCountsByMercado(listEsp, m=>mercadoGeralNome(m.mercadoGeralId));
@@ -2986,11 +2986,11 @@ function renderAll(){
   const gcMercadoAposta = greenRedCountsByMercado(listEsp, m=>mercadoApostaNome(m.mercadoApostaId));
   renderRankingList('rankMercadoAposta', gcMercadoAposta);
   const gcTime = greenRedCountsByEntidade(listEsp, 'Estatística de Equipe Individual');
-  renderRankingList('rankTime', gcTime, {showMarkets:true, showZone:true});
+  renderRankingList('rankTime', gcTime, {showMarkets:true});
   const gcJogador = greenRedCountsByEntidade(listEsp, 'Estatística de Jogador');
-  renderRankingList('rankJogador', gcJogador, {showMarkets:true, showZone:true});
+  renderRankingList('rankJogador', gcJogador, {showMarkets:true});
   const gcCampeonato = greenRedCountsByCampeonato(listEsp);
-  renderRankingList('rankCampeonato', gcCampeonato, {showMarkets:true, showZone:true});
+  renderRankingList('rankCampeonato', gcCampeonato, {showMarkets:true});
   const gcMomento = greenRedCountsByLeg(listEsp, l=>l.momento||'Não informado');
   renderGreenRedChart('chartMomento', gcMomento);
   const byBilhete = {};
