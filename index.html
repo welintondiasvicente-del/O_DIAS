@@ -6,8 +6,15 @@
 <title>O DIAS — Gerenciador de Banca</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f0f0f">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="ícone-192.png" type="image/png">
+<link rel="apple-touch-icon" href="ícone-192.png">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
+</script>
 <style>
 @font-face {
   font-family: 'Bebas Neue';
@@ -132,6 +139,12 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 }
 .grid-toggle-btn{font-family:var(--font-body,inherit);font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;background:var(--card2);border:1px solid var(--line2);color:var(--gray);padding:5px 10px;border-radius:7px;cursor:pointer;white-space:nowrap;}
 .grid-toggle-btn:hover{color:var(--white);border-color:var(--gray-dim);}
+.saldo-casa-box{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:-6px;}
+.saldo-casa-row{display:flex;align-items:center;gap:10px;}
+.saldo-casa-lbl{font-size:11px;color:var(--gray-dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700;white-space:nowrap;}
+.saldo-casa-val{font-family:var(--font-display);font-size:17px;color:var(--white);flex:1;text-align:right;}
+.saldo-eye-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;color:var(--gray);flex-shrink:0;}
+.saldo-eye-btn:hover{color:var(--white);}
 .section-title:first-child{margin-top:0;}
 .section-title .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent);}
 .section-title.small{font-size:16px;margin:18px 0 10px;color:var(--gray);}
@@ -1107,6 +1120,10 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
             <input type="text" id="legPartida" placeholder="Ex: Flamengo x Vasco">
           </div>
         </div>
+        <div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span class="saldo-casa-lbl" style="white-space:normal;">🏆 Campeonatos salvos (toque pra usar)</span>
+          <button type="button" class="grid-toggle-btn" data-target="campeonatoChips">👁 Ocultar</button>
+        </div>
         <div id="campeonatoChips" class="filter-chips" style="margin-top:6px;"></div>
         <div class="field" style="margin-top:8px;">
           <label>Tipo de Aposta</label>
@@ -1169,6 +1186,13 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
         <div class="field"><label>Data</label><input type="date" id="apostaData" required></div>
         <div class="field"><label>Casa de Aposta</label><select id="apostaCasa" required></select></div>
       </div>
+      <div class="field saldo-casa-box">
+        <div class="saldo-casa-row">
+          <span class="saldo-casa-lbl">💰 Saldo atual da casa</span>
+          <span class="saldo-casa-val" id="saldoCasaAtualVal">••••••</span>
+          <button type="button" class="saldo-eye-btn" id="btnEyeSaldoCasa" title="Mostrar/ocultar saldo">👁️</button>
+        </div>
+      </div>
       <div class="field">
         <label>Bilhete</label>
         <div class="seg" id="segBilhete">
@@ -1199,6 +1223,13 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
       <div class="field-row">
         <div class="field"><label>Data</label><input type="date" id="obData" required></div>
         <div class="field"><label>Plataforma</label><select id="obPlataforma" required></select></div>
+      </div>
+      <div class="field saldo-casa-box">
+        <div class="saldo-casa-row">
+          <span class="saldo-casa-lbl">💰 Saldo atual da plataforma</span>
+          <span class="saldo-casa-val" id="saldoPlatAtualVal">••••••</span>
+          <button type="button" class="saldo-eye-btn" id="btnEyeSaldoPlat" title="Mostrar/ocultar saldo">👁️</button>
+        </div>
       </div>
       <div class="field">
         <label>Tipo</label>
@@ -1462,6 +1493,40 @@ function platAtual(plat){
   v += movimentacoesSum('plataforma', plat.id);
   return round2(v);
 }
+
+/* ---------- Visualizador de saldo (olho) nos formulários de registro ---------- */
+let saldoCasaMasked = false;
+let saldoPlatMasked = false;
+function updateSaldoCasaView(){
+  const valEl = document.getElementById('saldoCasaAtualVal');
+  if(!valEl) return;
+  const casa = casaById(document.getElementById('apostaCasa').value);
+  if(!casa){ valEl.textContent = '—'; return; }
+  const atual = casaAtual(casa);
+  valEl.textContent = saldoCasaMasked ? '••••••' : fmtBRL(atual);
+  valEl.style.color = saldoCasaMasked ? '' : (atual>=casa.bancaInicial ? 'var(--green)' : 'var(--red)');
+}
+function updateSaldoPlatView(){
+  const valEl = document.getElementById('saldoPlatAtualVal');
+  if(!valEl) return;
+  const plat = platById(document.getElementById('obPlataforma').value);
+  if(!plat){ valEl.textContent = '—'; return; }
+  const atual = platAtual(plat);
+  valEl.textContent = saldoPlatMasked ? '••••••' : fmtBRL(atual);
+  valEl.style.color = saldoPlatMasked ? '' : (atual>=plat.bancaInicial ? 'var(--green)' : 'var(--red)');
+}
+document.getElementById('apostaCasa').addEventListener('change', updateSaldoCasaView);
+document.getElementById('obPlataforma').addEventListener('change', updateSaldoPlatView);
+document.getElementById('btnEyeSaldoCasa').addEventListener('click', ()=>{
+  saldoCasaMasked = !saldoCasaMasked;
+  document.getElementById('btnEyeSaldoCasa').textContent = saldoCasaMasked ? '🙈' : '👁️';
+  updateSaldoCasaView();
+});
+document.getElementById('btnEyeSaldoPlat').addEventListener('click', ()=>{
+  saldoPlatMasked = !saldoPlatMasked;
+  document.getElementById('btnEyeSaldoPlat').textContent = saldoPlatMasked ? '🙈' : '👁️';
+  updateSaldoPlatView();
+});
 
 function totalsEsportiva(){
   const inicial = DB.casas.reduce((s,c)=>s+Number(c.bancaInicial||0),0);
@@ -3794,6 +3859,8 @@ function openApostaModal(id){
     document.getElementById('creditoHelper').style.display = a.valorTipo==='Créditos Grátis'?'block':'none';
     segSet('segBilhete', a.bilhete || 'Simples');
   }
+  saldoCasaMasked = false;
+  updateSaldoCasaView();
   openModal('modalAposta');
 }
 document.getElementById('formAposta').addEventListener('submit', e=>{
@@ -3839,6 +3906,8 @@ function openOBModal(id){
     document.getElementById('obPayout').value = b.payout;
     segSet('segTipoOB', b.tipo); segSet('segStatusOB', b.status);
   }
+  saldoPlatMasked = false;
+  updateSaldoPlatView();
   openModal('modalOB');
 }
 document.getElementById('formOB').addEventListener('submit', e=>{
