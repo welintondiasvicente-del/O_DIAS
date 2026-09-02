@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0f0f0f">
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js');
-  });
-}
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>O DIAS — Gerenciador de Banca</title>
@@ -219,8 +210,8 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 }
 .meta-hero-real-badge.tier-gold{ border-color:rgba(217,164,65,.5); background:rgba(217,164,65,.08); }
 .meta-hero-real-badge.tier-hot{ border-color:rgba(227,6,19,.4); background:rgba(227,6,19,.07); }
-.meta-hero-logo{position:absolute;top:14px;right:16px;width:72px;height:72px;object-fit:contain;opacity:.9;}
-@media (max-width:520px){ .meta-hero-logo{width:56px;height:56px;top:10px;right:10px;} }
+.meta-hero-logo{position:absolute;top:12px;right:14px;width:100px;height:100px;aspect-ratio:1/1;object-fit:contain;opacity:.95;image-rendering:auto;animation:metaFloat 3.2s ease-in-out infinite;}
+@media (max-width:520px){ .meta-hero-logo{width:132px;height:132px;top:8px;right:8px;} }
 /* Telas largas (desktop/PC): o escudo passa a ficar centralizado, empilhado
    acima do badge "TA Real", em vez de flutuar solto no canto e se sobrepor
    ao percentual. O comportamento mobile acima permanece intocado. */
