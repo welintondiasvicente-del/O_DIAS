@@ -1,15 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0f0f0f">
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js');
-  });
-}
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>O DIAS — Gerenciador de Banca</title>
@@ -232,6 +223,11 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
     margin:0 auto 8px;
     opacity:.85;
   }
+  /* No PC, o badge "TA Real" quebra pra uma linha própria, centralizado,
+     em vez de ficar preso na ponta direita da linha do escudo/valor.
+     Mobile (regra acima, max-width:520px) não é afetado. */
+  .meta-hero-top{ flex-wrap:wrap; justify-content:center; }
+  .meta-hero-real-badge{ flex-basis:100%; max-width:220px; margin:12px auto 0; }
 }
 
 /* ---------- META EDITOR (Bancas tab) ---------- */
@@ -1206,6 +1202,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
           <span class="saldo-casa-val" id="saldoCasaAtualVal">••••••</span>
           <button type="button" class="saldo-eye-btn" id="btnEyeSaldoCasa" title="Mostrar/ocultar saldo">👁️</button>
         </div>
+        <div id="saldoCasaPendenteNota" style="display:none;font-size:10.5px;color:var(--gray-dim);margin-top:4px;"></div>
       </div>
       <div class="field">
         <label>Bilhete</label>
@@ -1265,6 +1262,16 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
       <div class="field-row">
         <div class="field"><label>Valor Investido (R$)</label><input type="number" step="0.01" min="0" id="obValor" required></div>
         <div class="field"><label>Payout (%)</label><input type="number" step="1" min="50" max="100" id="obPayout" value="80" required></div>
+      </div>
+      <div class="field calc-preview-box" id="calcPreviewBoxOB" style="display:none;">
+        <div class="calc-preview-row">
+          <span class="calc-preview-lbl">✅ Se Gain</span>
+          <span class="calc-preview-val" id="calcPreviewGainOB">—</span>
+        </div>
+        <div class="calc-preview-row">
+          <span class="calc-preview-lbl">❌ Se Loss</span>
+          <span class="calc-preview-val" id="calcPreviewLossOB">—</span>
+        </div>
       </div>
       <div class="field">
         <label>Status</label>
@@ -1525,10 +1532,27 @@ function updateSaldoCasaView(){
   const valEl = document.getElementById('saldoCasaAtualVal');
   if(!valEl) return;
   const casa = casaById(document.getElementById('apostaCasa').value);
-  if(!casa){ valEl.textContent = '—'; return; }
-  const atual = casaAtual(casa);
+  const notaEl = document.getElementById('saldoCasaPendenteNota');
+  if(!casa){ valEl.textContent = '—'; if(notaEl) notaEl.style.display='none'; return; }
+  const editingId = document.getElementById('apostaId').value;
+  let pendente = 0;
+  DB.apostas.forEach(a=>{
+    if(a.casaId===casa.id && a.status==='Pendente' && a.valorTipo==='Saldo da Banca' && a.id!==editingId){
+      pendente += Number(a.valor||0);
+    }
+  });
+  pendente = round2(pendente);
+  const atual = round2(casaAtual(casa) - pendente);
   valEl.textContent = saldoCasaMasked ? '••••••' : fmtBRL(atual);
   valEl.style.color = saldoCasaMasked ? '' : (atual>=casa.bancaInicial ? 'var(--green)' : 'var(--red)');
+  if(notaEl){
+    if(!saldoCasaMasked && pendente>0){
+      notaEl.textContent = 'Já descontado ' + fmtBRL(pendente) + ' em apostas pendentes nesta casa.';
+      notaEl.style.display = '';
+    } else {
+      notaEl.style.display = 'none';
+    }
+  }
 }
 function updateSaldoPlatView(){
   const valEl = document.getElementById('saldoPlatAtualVal');
@@ -1578,6 +1602,24 @@ function updateApostaCalcPreview(){
 document.getElementById('apostaValor').addEventListener('input', updateApostaCalcPreview);
 document.getElementById('apostaOdd').addEventListener('input', updateApostaCalcPreview);
 document.getElementById('segValorTipo').addEventListener('click', ()=> setTimeout(updateApostaCalcPreview, 0));
+
+/* ---------- Pré-cálculo de retorno/lucro no formulário de OB ---------- */
+function updateOBCalcPreview(){
+  const box = document.getElementById('calcPreviewBoxOB');
+  if(!box) return;
+  const valor = parseFloat(document.getElementById('obValor').value)||0;
+  const payout = parseFloat(document.getElementById('obPayout').value)||0;
+  if(valor<=0 || payout<=0){ box.style.display = 'none'; return; }
+  box.style.display = '';
+  const lucro = round2(valor*(payout/100));
+  const retorno = round2(valor+lucro);
+  document.getElementById('calcPreviewGainOB').textContent = fmtBRL(retorno) + ' (lucro ' + fmtBRL(lucro) + ')';
+  document.getElementById('calcPreviewGainOB').style.color = 'var(--green)';
+  document.getElementById('calcPreviewLossOB').textContent = '-' + fmtBRL(valor);
+  document.getElementById('calcPreviewLossOB').style.color = 'var(--red)';
+}
+document.getElementById('obValor').addEventListener('input', updateOBCalcPreview);
+document.getElementById('obPayout').addEventListener('input', updateOBCalcPreview);
 
 function totalsEsportiva(){
   const inicial = DB.casas.reduce((s,c)=>s+Number(c.bancaInicial||0),0);
@@ -3961,6 +4003,7 @@ function openOBModal(id){
   }
   saldoPlatMasked = false;
   updateSaldoPlatView();
+  updateOBCalcPreview();
   openModal('modalOB');
 }
 document.getElementById('formOB').addEventListener('submit', e=>{
