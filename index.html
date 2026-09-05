@@ -907,6 +907,17 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
         <div class="chart-wrap"><canvas id="chartPlataforma"></canvas></div>
       </div>
     </div>
+    <div class="charts-grid two-even">
+      <div class="chart-card">
+        <h4>Ranking — Estratégia (acerto/erro)</h4>
+        <div class="rank-list" id="rankEstrategiaOB"></div>
+        <div class="helper-text">Critério: % de acerto → mais Gains → menos Losses → mais operações.</div>
+      </div>
+      <div class="chart-card">
+        <h4>Lucro por Estratégia</h4>
+        <div class="chart-wrap"><canvas id="chartEstrategiaOB"></canvas></div>
+      </div>
+    </div>
     <div class="chart-card" style="margin-bottom:18px;">
       <h4>CALL / PUT — Resultado</h4>
       <div class="chart-wrap"><canvas id="chartCallPut"></canvas></div>
@@ -1001,6 +1012,18 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
       <div class="add-banca-form">
         <input type="text" name="nome" id="novoCampeonatoNome" placeholder="Nome do campeonato (ex: Brasileirão Série A)">
         <button class="btn btn-primary" id="btnAddCampeonato">+ Adicionar</button>
+      </div>
+    </div>
+
+    <div class="section-title">Estratégias (Opções Binárias)<button type="button" class="grid-toggle-btn" data-target="gridEstrategias">👁 Ocultar</button><div class="rule"></div></div>
+    <div class="card" style="margin-bottom:24px;">
+      <p class="helper-text" style="margin-bottom:12px;">
+        Estratégias salvas aqui ficam sugeridas automaticamente ao registrar uma nova operação, e alimentam os gráficos de acerto/erro e lucro por estratégia.
+      </p>
+      <div class="banca-grid" id="gridEstrategias" style="margin-bottom:14px;"></div>
+      <div class="add-banca-form">
+        <input type="text" name="nome" id="novaEstrategiaNome" placeholder="Nome da estratégia (ex: Rompimento)">
+        <button class="btn btn-primary" id="btnAddEstrategia">+ Adicionar</button>
       </div>
     </div>
 
@@ -1259,6 +1282,19 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
           <button type="button" data-v="PUT" class="opt">📉 PUT</button>
         </div>
       </div>
+      <div class="field">
+        <label>Estratégia</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="obEstrategia" list="obEstrategiaList" placeholder="Estratégia (ex: Rompimento, Suporte/Resistência)" style="flex:1;">
+          <datalist id="obEstrategiaList"></datalist>
+          <button type="button" class="btn btn-sm" id="btnSaveEstrategia" title="Salvar esta estratégia para reutilizar depois">💾</button>
+        </div>
+        <div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span class="saldo-casa-lbl" style="white-space:normal;">🎯 Estratégias salvas (toque pra usar)</span>
+          <button type="button" class="grid-toggle-btn" data-target="estrategiaChips">👁 Ocultar</button>
+        </div>
+        <div id="estrategiaChips" class="filter-chips" style="margin-top:6px;"></div>
+      </div>
       <div class="field-row">
         <div class="field"><label>Valor Investido (R$)</label><input type="number" step="0.01" min="0" id="obValor" required></div>
         <div class="field"><label>Payout (%)</label><input type="number" step="1" min="50" max="100" id="obPayout" value="80" required></div>
@@ -1443,6 +1479,7 @@ function defaultDB(){
     mercadosGerais: [],
     mercadosApostas: [],
     campeonatos: [],
+    estrategias: [],
     metaTA: 65
   };
 }
@@ -1930,6 +1967,18 @@ function greenRedCountsByLeg(listEsp, getValueFn){
       if(st==='Green') counts[key].green++;
       else if(st==='Red') counts[key].red++;
     });
+  });
+  return counts;
+}
+// Conta Gain vs Loss por categoria (ex: estratégia) para Opções Binárias,
+// que não têm "pernas" como as apostas esportivas — cada registro já é o resultado final.
+function greenRedCountsOB(listOB, getValueFn){
+  const counts = {};
+  listOB.forEach(b=>{
+    const key = getValueFn(b);
+    if(!counts[key]) counts[key] = {green:0, red:0};
+    if(b.status==='GAIN') counts[key].green++;
+    else if(b.status==='LOSS') counts[key].red++;
   });
   return counts;
 }
@@ -3199,6 +3248,7 @@ const REPORT_CHART_LIST = [
   ['chartTADiariaOB','TA Diária vs Meta (OB)'],
   ['chartTAMensalOB','TA Mensal — OB'],
   ['chartPlataforma','Lucro por Plataforma'],
+  ['chartEstrategiaOB','Lucro por Estratégia (OB)'],
   ['chartCallPut','CALL / PUT — Resultado']
 ];
 
@@ -3372,6 +3422,11 @@ function renderAll(){
   const byPlat = {};
   listOB.forEach(b=>{ const p=platById(b.plataformaId); const nm = p?p.nome:'—'; byPlat[nm]=(byPlat[nm]||0)+profitBinaria(b); });
   renderBarProfit('chartPlataforma', Object.keys(byPlat), Object.values(byPlat));
+  const gcEstrategia = greenRedCountsOB(listOB, b=>b.estrategia || 'Não informado');
+  renderRankingList('rankEstrategiaOB', gcEstrategia);
+  const byEstrategia = {};
+  listOB.forEach(b=>{ const nm = b.estrategia || 'Não informado'; byEstrategia[nm]=(byEstrategia[nm]||0)+profitBinaria(b); });
+  renderBarProfit('chartEstrategiaOB', Object.keys(byEstrategia), Object.values(byEstrategia));
   const callCount = listOB.filter(b=>b.tipo==='CALL');
   const putCount = listOB.filter(b=>b.tipo==='PUT');
   renderBarProfit('chartCallPut', ['CALL','PUT'], [callCount.reduce((s,b)=>s+profitBinaria(b),0), putCount.reduce((s,b)=>s+profitBinaria(b),0)]);
@@ -3440,6 +3495,16 @@ function renderMercadosUI(){
         <h5>🏆 ${c.nome}</h5>
       </div>`).join('') : `<div class="empty-state" style="grid-column:1/-1;padding:20px;">Nenhum campeonato salvo ainda.</div>`;
   }
+
+  const gridEstr = document.getElementById('gridEstrategias');
+  if(gridEstr){
+    gridEstr.innerHTML = DB.estrategias.length ? DB.estrategias.map(e=>`
+      <div class="banca-card">
+        <button class="del-banca" onclick="App.deleteEstrategia('${e.id}')">✕</button>
+        <button class="edit-banca" onclick="App.editEstrategia('${e.id}')" title="Renomear">✏️</button>
+        <h5>🎯 ${e.nome}</h5>
+      </div>`).join('') : `<div class="empty-state" style="grid-column:1/-1;padding:20px;">Nenhuma estratégia salva ainda.</div>`;
+  }
 }
 
 function refreshSelects(){
@@ -3459,6 +3524,28 @@ function refreshSelects(){
 
   document.getElementById('legCampeonatoList').innerHTML = DB.campeonatos.map(c=>`<option value="${c.nome}">`).join('');
   renderCampeonatoChips();
+
+  document.getElementById('obEstrategiaList').innerHTML = DB.estrategias.map(e=>`<option value="${e.nome}">`).join('');
+  renderEstrategiaChips();
+}
+function renderEstrategiaChips(){
+  const el = document.getElementById('estrategiaChips');
+  if(!el) return;
+  el.innerHTML = DB.estrategias.length ? DB.estrategias.map(e=>`
+    <div class="chip" data-nome="${e.nome}" style="cursor:pointer;">
+      <span class="estrategiaPick">🎯 ${e.nome}</span>
+      <button type="button" class="estrategiaDel" data-id="${e.id}">✕</button>
+    </div>`).join('') : '';
+  el.querySelectorAll('.estrategiaPick').forEach(span=>{
+    span.addEventListener('click', ()=>{ document.getElementById('obEstrategia').value = span.closest('.chip').dataset.nome; });
+  });
+  el.querySelectorAll('.estrategiaDel').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      DB.estrategias = DB.estrategias.filter(x=>x.id!==btn.dataset.id);
+      saveDB(); refreshSelects();
+    });
+  });
 }
 function renderCampeonatoChips(){
   const el = document.getElementById('campeonatoChips');
@@ -3841,6 +3928,16 @@ document.getElementById('btnSaveCampeonato').addEventListener('click', ()=>{
   refreshSelects();
   toast('Campeonato salvo — vai aparecer sugerido nas próximas apostas.');
 });
+document.getElementById('btnSaveEstrategia').addEventListener('click', ()=>{
+  const nome = document.getElementById('obEstrategia').value.trim();
+  if(!nome){ toast('Digite o nome da estratégia antes de salvar.'); return; }
+  const jaExiste = DB.estrategias.some(e=>e.nome.toLowerCase()===nome.toLowerCase());
+  if(jaExiste){ toast('Essa estratégia já está salva.'); return; }
+  DB.estrategias.push({ id:uid(), nome });
+  saveDB();
+  refreshSelects();
+  toast('Estratégia salva — vai aparecer sugerida nas próximas operações.');
+});
 
 document.getElementById('btnAddMercado').addEventListener('click', ()=>{
   const mercadoGeralId = document.getElementById('legMercadoGeral').value || null;
@@ -3986,6 +4083,7 @@ function resetFormOB(){
   document.getElementById('obData').value = todayStr();
   document.getElementById('obValor').value='';
   document.getElementById('obPayout').value='80';
+  document.getElementById('obEstrategia').value='';
   segSet('segTipoOB','CALL'); segSet('segStatusOB','GAIN');
 }
 function openOBModal(id){
@@ -3999,6 +4097,7 @@ function openOBModal(id){
     document.getElementById('obPlataforma').value = b.plataformaId;
     document.getElementById('obValor').value = b.valor;
     document.getElementById('obPayout').value = b.payout;
+    document.getElementById('obEstrategia').value = b.estrategia || '';
     segSet('segTipoOB', b.tipo); segSet('segStatusOB', b.status);
   }
   saldoPlatMasked = false;
@@ -4009,6 +4108,7 @@ function openOBModal(id){
 document.getElementById('formOB').addEventListener('submit', e=>{
   e.preventDefault();
   const id = document.getElementById('obId').value;
+  const estrategia = document.getElementById('obEstrategia').value.trim();
   const rec = {
     id: id || uid(),
     data: document.getElementById('obData').value,
@@ -4016,8 +4116,12 @@ document.getElementById('formOB').addEventListener('submit', e=>{
     tipo: segValue('segTipoOB'),
     valor: parseFloat(document.getElementById('obValor').value)||0,
     payout: parseFloat(document.getElementById('obPayout').value)||80,
+    estrategia: estrategia,
     status: segValue('segStatusOB')
   };
+  if(estrategia && !DB.estrategias.some(e=>e.nome.toLowerCase()===estrategia.toLowerCase())){
+    DB.estrategias.push({ id:uid(), nome:estrategia });
+  }
   if(id){ const i = DB.binarias.findIndex(x=>x.id===id); DB.binarias[i]=rec; toast('Operação atualizada.'); }
   else { DB.binarias.push(rec); toast('Operação registrada.'); }
   saveDB(); closeModal('modalOB'); renderAll();
@@ -4144,7 +4248,9 @@ window.App = {
   deleteMercadoAposta: (id)=>{ if(confirm('Excluir este mercado da aposta? Registros vinculados permanecerão, mas sem essa referência.')){ DB.mercadosApostas = DB.mercadosApostas.filter(m=>m.id!==id); saveDB(); renderAll(); toast('Mercado excluído.'); } },
   editMercadoAposta: (id)=>{ const m = mercadoApostaById(id); if(!m) return; const val = prompt('Novo nome do mercado da aposta:', m.nome); if(val===null || !val.trim()) return; m.nome = val.trim(); saveDB(); renderAll(); toast('Mercado atualizado.'); },
   deleteCampeonato: (id)=>{ if(confirm('Excluir este campeonato salvo? Apostas já registradas não serão afetadas.')){ DB.campeonatos = DB.campeonatos.filter(c=>c.id!==id); saveDB(); renderAll(); toast('Campeonato excluído.'); } },
-  editCampeonato: (id)=>{ const c = DB.campeonatos.find(x=>x.id===id); if(!c) return; const val = prompt('Novo nome do campeonato:', c.nome); if(val===null || !val.trim()) return; c.nome = val.trim(); saveDB(); renderAll(); toast('Campeonato atualizado.'); }
+  editCampeonato: (id)=>{ const c = DB.campeonatos.find(x=>x.id===id); if(!c) return; const val = prompt('Novo nome do campeonato:', c.nome); if(val===null || !val.trim()) return; c.nome = val.trim(); saveDB(); renderAll(); toast('Campeonato atualizado.'); },
+  deleteEstrategia: (id)=>{ if(confirm('Excluir esta estratégia salva? Operações já registradas não serão afetadas.')){ DB.estrategias = DB.estrategias.filter(e=>e.id!==id); saveDB(); renderAll(); toast('Estratégia excluída.'); } },
+  editEstrategia: (id)=>{ const e = DB.estrategias.find(x=>x.id===id); if(!e) return; const val = prompt('Novo nome da estratégia:', e.nome); if(val===null || !val.trim()) return; e.nome = val.trim(); saveDB(); renderAll(); toast('Estratégia atualizada.'); }
 };
 
 /* ============================================================
@@ -4392,6 +4498,14 @@ document.getElementById('btnAddCampeonato').addEventListener('click', ()=>{
   DB.campeonatos.push({ id:uid(), nome });
   saveDB(); document.getElementById('novoCampeonatoNome').value='';
   renderAll(); toast('Campeonato adicionado.');
+});
+document.getElementById('btnAddEstrategia').addEventListener('click', ()=>{
+  const nome = document.getElementById('novaEstrategiaNome').value.trim();
+  if(!nome){ toast('Informe o nome da estratégia.'); return; }
+  if(DB.estrategias.some(e=>e.nome.toLowerCase()===nome.toLowerCase())){ toast('Essa estratégia já está salva.'); return; }
+  DB.estrategias.push({ id:uid(), nome });
+  saveDB(); document.getElementById('novaEstrategiaNome').value='';
+  renderAll(); toast('Estratégia adicionada.');
 });
 
 // Meta TA slider lives inside the dynamically-rendered editor card (Bancas tab) — use delegation.
