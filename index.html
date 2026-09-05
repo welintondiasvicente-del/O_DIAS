@@ -800,6 +800,10 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
         <div class="chart-wrap"><canvas id="chartTADiariaEsportiva"></canvas></div>
       </div>
     </div>
+    <div class="chart-card" style="margin-bottom:18px;">
+      <h4>Lucro Diário (Esportiva)</h4>
+      <div class="chart-wrap"><canvas id="chartLucroDiarioEsportiva"></canvas></div>
+    </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
         <h4>TA Mensal — Fechamento vs Meta</h4>
@@ -895,6 +899,10 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
         <h4>TA Diária vs Meta</h4>
         <div class="chart-wrap"><canvas id="chartTADiariaOB"></canvas></div>
       </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:18px;">
+      <h4>Lucro Diário (OB)</h4>
+      <div class="chart-wrap"><canvas id="chartLucroDiarioOB"></canvas></div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
@@ -1107,7 +1115,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
       🤖 Análise Inteligente<div class="rule"></div>
     </div>
     <div class="helper-text" style="margin-bottom:14px;">
-      Relatório gerado automaticamente com base em regras estatísticas sobre tudo que está registrado no app (Apostas Esportivas + Opções Binárias): score de saúde da gestão, tendência recente, dia da semana, casas/plataformas, faixa de odds e consistência de stake. Não é um modelo de IA externo — é um motor de análise local, roda 100% no seu navegador, sem enviar dados pra nenhum servidor.
+      Relatório gerado automaticamente com base em regras estatísticas sobre tudo que está registrado no app (Apostas Esportivas + Opções Binárias): score de saúde da gestão, tendência recente, dia da semana, casas/plataformas, faixa de odds, esporte e consistência de stake. Não é um modelo de IA externo — é um motor de análise local, roda 100% no seu navegador, sem enviar dados pra nenhum servidor. Ele analisa apenas o seu histórico já registrado (retrospectivo) — não busca jogos, odds ou estatísticas ao vivo de nenhum site externo.
     </div>
     <button class="btn btn-primary" id="btnGerarInsights" style="margin-bottom:16px;">🔄 Atualizar Análise</button>
     <div id="iaReportContent"></div>
@@ -1935,6 +1943,20 @@ function renderTAMonthlyChart(canvasId, entries, kind, metaValue){
 /* ============================================================
    BAR CHARTS (grouped by category, profit)
 ============================================================ */
+// Agrupa uma lista de eventos {data, delta} por dia e desenha um gráfico de
+// barras com o lucro/prejuízo líquido de cada dia (não é o saldo acumulado —
+// é só o resultado daquele dia isolado).
+function renderLucroDiarioChart(canvasId, events){
+  const porDia = {};
+  events.forEach(ev=>{
+    if(!ev.data) return;
+    porDia[ev.data] = round2((porDia[ev.data]||0) + ev.delta);
+  });
+  const dias = Object.keys(porDia).sort();
+  const labels = dias.map(fmtDate);
+  const values = dias.map(d=>porDia[d]);
+  renderBarProfit(canvasId, labels, values);
+}
 function renderBarProfit(canvasId, labels, values){
   const colors = values.map(v=> v>=0 ? COLOR_GREEN_SOFT : COLOR_RED_SOFT);
   const borders = values.map(v=> v>=0 ? COLOR_GREEN : COLOR_RED);
@@ -3078,6 +3100,62 @@ function generateIAReport(){
     ).join('') + '</div>';
   }
 
+  // ---- Desempenho por esporte (visão geral, todas as odds) ----
+  const gcEsporteIA = greenRedCountsByLeg(apostasFinalizadas, l=>l.esporte || 'Não informado');
+  const rankEsporteIA = rankEntries(gcEsporteIA).filter(r=>r.total>=2);
+  if(rankEsporteIA.length>=1){
+    html += '<div class="ia-section-title">📊 Desempenho por Esporte</div>';
+    html += '<div class="ia-mini-grid">' + rankEsporteIA.map(r=>{
+      const cor = r.total>=3 && r.ta>=60 ? 'var(--green)' : (r.total>=3 && r.ta<=40 ? '#ff5b64' : 'var(--white)');
+      return '<div class="ia-mini-card"><div class="lbl">'+r.nome+'</div><div class="val" style="color:'+cor+';">'+r.ta.toFixed(0)+'%</div><div class="sub">'+r.green+'G · '+r.red+'R</div></div>';
+    }).join('') + '</div>';
+  }
+
+  // ---- Zona de valor: odds 1.51 a 2.00, cruzado por esporte ----
+  // Recorte específico pedido: nessa faixa de odd, quais esportes têm se mostrado
+  // mais consistentes no SEU histórico (retrospectivo — não é indicação de jogos futuros).
+  function esporteDaAposta(a){
+    const legs = getLegs(a);
+    if(legs.length===0) return 'Não informado';
+    const esportes = [...new Set(legs.map(l=>l.esporte).filter(Boolean))];
+    if(esportes.length===0) return 'Não informado';
+    if(esportes.length===1) return esportes[0];
+    return 'Combinado (vários esportes)';
+  }
+  const zonaOdd = {};
+  apostasFinalizadas.forEach(a=>{
+    const odd = Number(a.odd)||0;
+    if(odd<1.51 || odd>2.00) return;
+    const esp = esporteDaAposta(a);
+    if(!zonaOdd[esp]) zonaOdd[esp] = {green:0, red:0, lucro:0};
+    if(a.status==='Green') zonaOdd[esp].green++; else zonaOdd[esp].red++;
+    zonaOdd[esp].lucro = round2(zonaOdd[esp].lucro + profitAposta(a));
+  });
+  const rankZonaOdd = Object.keys(zonaOdd).map(k=>{
+    const c = zonaOdd[k], total = c.green+c.red, ta = total?(c.green/total*100):0;
+    return { nome:k, green:c.green, red:c.red, total, ta, lucro:c.lucro };
+  }).filter(r=>r.total>0).sort((a,b)=> b.ta-a.ta);
+
+  html += '<div class="ia-section-title">💎 Zona de Valor — Odds 1.51 a 2.00 por Esporte</div>';
+  if(rankZonaOdd.length===0){
+    html += '<div class="ia-empty">Você ainda não tem apostas finalizadas com odd entre 1.51 e 2.00 pra essa análise aparecer. Assim que registrar algumas nessa faixa, elas entram aqui automaticamente.</div>';
+  } else {
+    const comAmostra = rankZonaOdd.filter(r=>r.total>=3);
+    if(comAmostra.length){
+      html += comAmostra.map(r=>{
+        const consistente = r.ta>=60;
+        return '<div class="ia-card '+(consistente?'good':(r.ta<=40?'bad':'info'))+'"><div class="ia-title">'+r.nome+' — '+r.ta.toFixed(0)+'% de acerto nessa faixa'+(consistente?' ✅ consistente no seu histórico':'')+'</div>'
+          + '<div class="ia-body">'+r.green+'G · '+r.red+'R em '+r.total+' apostas com odd entre 1.51 e 2.00, resultado de '+fmtBRL(r.lucro)+'. '
+          + (consistente ? 'Esse é o tipo de combinação (esporte + faixa de odd) que historicamente tem valido a pena pra você — vale continuar de olho nela.' : r.ta<=40 ? 'Essa combinação tem rendido pouco nessa faixa de odd — vale repensar antes de repetir o padrão.' : 'Amostra ainda modesta; continue registrando pra essa leitura ficar mais confiável.')
+          + '</div></div>';
+      }).join('');
+    }
+    const semAmostra = rankZonaOdd.filter(r=>r.total<3);
+    if(semAmostra.length){
+      html += '<div class="ia-empty">Amostra ainda pequena (menos de 3 apostas) nessa faixa pra: '+semAmostra.map(r=>r.nome+' ('+r.total+')').join(', ')+'.</div>';
+    }
+  }
+
   // ---- Consistência de stake ----
   if(stakeInfo){
     const nivel = stakeInfo.cv>60 ? 'alta' : (stakeInfo.cv>30 ? 'moderada' : 'baixa');
@@ -3131,7 +3209,7 @@ function generateIAReport(){
     }
   }
 
-  html += '<div class="helper-text" style="margin-top:16px;">Análise gerada em '+new Date().toLocaleString('pt-BR')+'. Baseada em regras de estatística (volume mínimo, taxa de acerto, sequências, tendência, dia da semana, casa/plataforma, faixa de odds e consistência de stake) — use como apoio, não como recomendação financeira.</div>';
+  html += '<div class="helper-text" style="margin-top:16px;">Análise gerada em '+new Date().toLocaleString('pt-BR')+'. Baseada em regras de estatística (volume mínimo, taxa de acerto, sequências, tendência, dia da semana, casa/plataforma, faixa de odds, esporte e consistência de stake) sobre o seu histórico já registrado — use como apoio, não como recomendação financeira.</div>';
 
   el.innerHTML = html;
 }
@@ -3240,12 +3318,14 @@ const REPORT_CHART_LIST = [
   ['chartResultadosGeral','Distribuição de Resultados (Geral)'],
   ['chartEvolEsportiva','Evolução da Banca (Esportiva)'],
   ['chartTADiariaEsportiva','TA Diária vs Meta (Esportiva)'],
+  ['chartLucroDiarioEsportiva','Lucro Diário (Esportiva)'],
   ['chartTAMensalEsportiva','TA Mensal — Esportiva'],
   ['chartStatusEsportiva','Green / Red / Reembolso'],
   ['chartMomento','Green vs Red por Tipo de Aposta (Pré-live/Live)'],
   ['chartBilhete','Lucro por Bilhete'],
   ['chartEvolOB','Evolução da Banca (OB)'],
   ['chartTADiariaOB','TA Diária vs Meta (OB)'],
+  ['chartLucroDiarioOB','Lucro Diário (OB)'],
   ['chartTAMensalOB','TA Mensal — OB'],
   ['chartPlataforma','Lucro por Plataforma'],
   ['chartEstrategiaOB','Lucro por Estratégia (OB)'],
@@ -3385,6 +3465,7 @@ function renderAll(){
     ...DB.movimentacoes.filter(m=>m.tipoDestino==='casa').map(m=>({data:m.data, delta:movDelta(m)}))
   ];
   renderEvolChart('chartEvolEsportiva', round2(es.inicial), eventsEsp, COLOR_WHITE);
+  renderLucroDiarioChart('chartLucroDiarioEsportiva', eventsEsp);
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
   const gcEsporte = greenRedCountsByLeg(listEsp, l=>l.esporte);
@@ -3417,6 +3498,7 @@ function renderAll(){
     ...DB.movimentacoes.filter(m=>m.tipoDestino==='plataforma').map(m=>({data:m.data, delta:movDelta(m)}))
   ];
   renderEvolChart('chartEvolOB', round2(ob.inicial), eventsOB, COLOR_WHITE);
+  renderLucroDiarioChart('chartLucroDiarioOB', eventsOB);
   renderTAChart('chartTADiariaOB', listOB, 'binaria', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalOB', listOB, 'binaria', DB.metaTA);
   const byPlat = {};
