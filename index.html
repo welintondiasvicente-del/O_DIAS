@@ -150,6 +150,20 @@ html.exporting .tab-panel.active{ position:static; visibility:visible; }
 .calc-preview-row + .calc-preview-row{border-top:1px solid var(--line);margin-top:3px;padding-top:6px;}
 .calc-preview-lbl{font-size:11px;color:var(--gray-dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700;white-space:nowrap;}
 .calc-preview-val{font-family:var(--font-display);font-size:15px;text-align:right;}
+
+/* ---------- Meta de lucro diária + stop loss (Esportiva / OB) ---------- */
+.meta-lucro-card{background:linear-gradient(135deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px;}
+.meta-lucro-title{font-family:var(--font-display);font-size:15px;letter-spacing:.5px;color:var(--white);}
+.meta-lucro-inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+.meta-lucro-inputs .field{margin-bottom:0;}
+.meta-lucro-bar{height:10px;border-radius:6px;background:var(--line2);overflow:hidden;margin-bottom:10px;}
+.meta-lucro-bar-fill{height:100%;border-radius:6px;transition:width .4s ease;}
+.meta-lucro-badge{font-size:13px;font-weight:700;padding:10px 12px;border-radius:10px;line-height:1.4;}
+.meta-lucro-badge.hit{background:rgba(46,204,113,.12);color:var(--green);}
+.meta-lucro-badge.stop{background:rgba(255,91,100,.13);color:#ff5b64;}
+.meta-lucro-badge.progress{background:rgba(217,164,65,.12);color:#e8c777;}
+.meta-lucro-badge.warn{background:rgba(255,91,100,.1);color:#ff8f96;}
+.meta-lucro-empty{font-size:12px;color:var(--gray-dim);line-height:1.5;}
 .section-title:first-child{margin-top:0;}
 .section-title .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent);}
 .section-title.small{font-size:16px;margin:18px 0 10px;color:var(--gray);}
@@ -750,6 +764,14 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
   <!-- =================== PRINCIPAL =================== -->
   <section class="tab-panel active" id="tab-principal">
     <div id="metaHero"></div>
+
+    <div class="meta-lucro-card" id="metaLucroGeral"></div>
+    <div class="chart-card" style="margin-bottom:18px;">
+      <h4>Meta Diária vs Realizado (Geral)</h4>
+      <div class="chart-wrap"><canvas id="chartMetaLucroDiariaGeral"></canvas></div>
+      <div class="helper-text">Cada barra é o lucro líquido daquele dia (Esportiva + OB somados). Verde forte = meta batida naquele dia. A linha tracejada é a sua meta diária.</div>
+    </div>
+
     <div class="section-title">Visão Geral<div class="rule"></div>
       <button class="btn btn-ghost btn-sm" id="btnToggleFilterGlobal">🔍 Filtros</button>
       <button class="btn btn-ghost btn-sm" id="btnToggleValues">👁️ Ocultar valores</button>
@@ -789,6 +811,8 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
   <section class="tab-panel" id="tab-esportiva">
     <div class="section-title">KPIs — Apostas Esportivas<div class="rule"></div></div>
     <div class="kpi-grid" id="kpiEsportiva"></div>
+
+    <div class="meta-lucro-card" id="metaLucroEsportiva"></div>
 
     <div class="charts-grid">
       <div class="chart-card">
@@ -889,6 +913,8 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
   <section class="tab-panel" id="tab-ob">
     <div class="section-title">KPIs — Opções Binárias<div class="rule"></div></div>
     <div class="kpi-grid" id="kpiOB"></div>
+
+    <div class="meta-lucro-card" id="metaLucroOB"></div>
 
     <div class="charts-grid">
       <div class="chart-card">
@@ -1488,7 +1514,13 @@ function defaultDB(){
     mercadosApostas: [],
     campeonatos: [],
     estrategias: [],
-    metaTA: 65
+    metaTA: 65,
+    metaLucroEsportivaDia: 0,
+    stopLossEsportivaDia: 0,
+    metaLucroOBDia: 0,
+    stopLossOBDia: 0,
+    metaLucroGeralDia: 0,
+    stopLossGeralDia: 0
   };
 }
 
@@ -1956,6 +1988,41 @@ function renderLucroDiarioChart(canvasId, events){
   const labels = dias.map(fmtDate);
   const values = dias.map(d=>porDia[d]);
   renderBarProfit(canvasId, labels, values);
+}
+// Igual ao de cima, mas colore mais forte quando o dia bateu a meta e desenha
+// uma linha tracejada com o valor da meta, pro usuário comparar dia a dia.
+function renderMetaLucroDiariaChart(canvasId, events, metaValue){
+  const porDia = {};
+  events.forEach(ev=>{
+    if(!ev.data) return;
+    porDia[ev.data] = round2((porDia[ev.data]||0) + ev.delta);
+  });
+  const dias = Object.keys(porDia).sort();
+  const labels = dias.length ? dias.map(fmtDate) : ['Sem dados'];
+  const values = dias.length ? dias.map(d=>porDia[d]) : [0];
+  const colors = values.map(v => metaValue>0 && v>=metaValue ? COLOR_GREEN : (v>=0 ? COLOR_GREEN_SOFT : COLOR_RED_SOFT));
+  const borders = values.map(v => metaValue>0 && v>=metaValue ? COLOR_GREEN : (v>=0 ? COLOR_GREEN : COLOR_RED));
+  const datasets = [{
+    label:'Lucro do dia', data: values, backgroundColor:colors, borderColor:borders, borderWidth:1.5, borderRadius:6, maxBarThickness:44,
+    datalabels: barLabelPlugin()
+  }];
+  if(metaValue>0){
+    datasets.push({ type:'line', label:'Meta', data: labels.map(()=>metaValue), borderColor:COLOR_AMBER, borderDash:[6,5],
+      borderWidth:2, pointRadius:0, tension:0, datalabels:{display:false} });
+  }
+  upsertChart(canvasId, {
+    type:'bar',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:10}},
+      plugins:{ legend:{display: metaValue>0} },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ font:{weight:'700', size:11}, autoSkip:true, autoSkipPadding:10, maxRotation:20 } },
+        y:{ display:false }
+      }
+    }
+  });
 }
 function renderBarProfit(canvasId, labels, values){
   const colors = values.map(v=> v>=0 ? COLOR_GREEN_SOFT : COLOR_RED_SOFT);
@@ -2568,6 +2635,65 @@ function kpiCard(label, value, sub, cls, icon){
   return `<div class="kpi ${cls||''}">${icon?`<div class="kpi-icon">${icon}</div>`:''}<div class="kpi-label">${label}</div><div class="kpi-value ${cls||''}">${value}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
 }
 
+/* ---------- Meta de lucro diária + stop loss (Esportiva / OB) ---------- */
+function renderMetaLucroCard(containerId, tipo){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const metaKey = tipo==='esportiva' ? 'metaLucroEsportivaDia' : tipo==='ob' ? 'metaLucroOBDia' : 'metaLucroGeralDia';
+  const stopKey = tipo==='esportiva' ? 'stopLossEsportivaDia' : tipo==='ob' ? 'stopLossOBDia' : 'stopLossGeralDia';
+  const meta = Number(DB[metaKey])||0;
+  const stop = Number(DB[stopKey])||0;
+  const hoje = todayStr();
+  let lucroHoje = 0;
+  if(tipo==='esportiva' || tipo==='geral'){
+    DB.apostas.forEach(a=>{ if(a.data===hoje) lucroHoje += profitAposta(a); });
+  }
+  if(tipo==='ob' || tipo==='geral'){
+    DB.binarias.forEach(b=>{ if(b.data===hoje) lucroHoje += profitBinaria(b); });
+  }
+  lucroHoje = round2(lucroHoje);
+
+  let badgeHtml = '', barPct = 0, barColor = 'var(--line2)', showBar = (meta>0 || stop>0);
+  if(!showBar){
+    badgeHtml = '<div class="meta-lucro-empty">Defina uma meta de lucro e/ou um limite de perda diário pra acompanhar aqui como o dia está indo.</div>';
+  } else if(meta>0 && lucroHoje>=meta){
+    badgeHtml = '<div class="meta-lucro-badge hit">✅ Meta batida hoje! Lucro de '+maskMoney(fmtBRL(lucroHoje))+' (meta era '+maskMoney(fmtBRL(meta))+')</div>';
+    barPct = 100; barColor = 'var(--green)';
+  } else if(stop>0 && lucroHoje<=-stop){
+    badgeHtml = '<div class="meta-lucro-badge stop">🛑 Limite de perda atingido — considere parar por hoje. Prejuízo de '+maskMoney(fmtBRL(Math.abs(lucroHoje)))+' (limite era '+maskMoney(fmtBRL(stop))+')</div>';
+    barPct = 100; barColor = '#ff5b64';
+  } else if(lucroHoje>=0){
+    if(meta>0){
+      const falta = round2(meta-lucroHoje);
+      badgeHtml = '<div class="meta-lucro-badge progress">🟡 Faltam '+maskMoney(fmtBRL(falta))+' pra bater a meta de hoje (lucro atual '+maskMoney(fmtBRL(lucroHoje))+')</div>';
+      barPct = Math.max(0, Math.min(100, lucroHoje/meta*100));
+    } else {
+      badgeHtml = '<div class="meta-lucro-badge progress">🟢 Hoje no positivo: '+maskMoney(fmtBRL(lucroHoje))+'</div>';
+      barPct = 0;
+    }
+    barColor = 'var(--green)';
+  } else {
+    let extra = '';
+    if(stop>0){
+      const faltaStop = round2(stop-Math.abs(lucroHoje));
+      extra = ' · faltam '+maskMoney(fmtBRL(faltaStop))+' pra atingir seu limite de perda';
+      barPct = Math.max(0, Math.min(100, Math.abs(lucroHoje)/stop*100));
+    }
+    badgeHtml = '<div class="meta-lucro-badge warn">🔴 Hoje no vermelho: '+maskMoney(fmtBRL(lucroHoje))+extra+'</div>';
+    barColor = 'var(--amber)';
+  }
+
+  el.innerHTML = `
+    <div class="meta-lucro-title">🎯 Meta de Lucro Diária (${tipo==='esportiva'?'Apostas Esportivas':tipo==='ob'?'Opções Binárias':'Geral — Esportiva + OB'})</div>
+    <div class="meta-lucro-inputs">
+      <div class="field"><label>Meta de Lucro (R$/dia)</label><input type="number" step="0.01" min="0" class="metaLucroInput" data-key="${metaKey}" value="${meta||''}" placeholder="ex: 30"></div>
+      <div class="field"><label>Limite de Perda (R$/dia)</label><input type="number" step="0.01" min="0" class="metaLucroInput" data-key="${stopKey}" value="${stop||''}" placeholder="ex: 20"></div>
+    </div>
+    ${showBar ? `<div class="meta-lucro-bar"><div class="meta-lucro-bar-fill" style="width:${barPct}%;background:${barColor};"></div></div>` : ''}
+    ${badgeHtml}
+  `;
+}
+
 let valuesHidden = localStorage.getItem('odias_hide_values')==='1';
 function maskMoney(str){ return valuesHidden ? '••••••' : str; }
 
@@ -2661,6 +2787,7 @@ function renderKPIEsportiva(){
     kpiCard('Yield (filtro)', yieldPct.toFixed(1)+'%', 'sobre '+fmtBRL(totalApostado)+' apostados'),
     kpiCard('TA (filtro)', ta.toFixed(1)+'%', c.win+'G · '+c.loss+'R · '+c.push+'Reemb. · '+c.pending+'Pend.')
   ].join('');
+  renderMetaLucroCard('metaLucroEsportiva', 'esportiva');
 }
 
 function renderKPIOB(){
@@ -2680,6 +2807,7 @@ function renderKPIOB(){
     kpiCard('Yield (filtro)', yieldPct.toFixed(1)+'%', 'sobre '+fmtBRL(totalInvestido)+' investidos'),
     kpiCard('TA (filtro)', ta.toFixed(1)+'%', c.win+'GAIN · '+c.loss+'LOSS · '+c.push+'Reemb.')
   ].join('');
+  renderMetaLucroCard('metaLucroOB', 'ob');
 }
 
 function renderKPIBonus(){
@@ -3312,6 +3440,7 @@ function renderRelatorio(){
 ============================================================ */
 const REPORT_CHART_LIST = [
   ['chartEvolGeral','Evolução da Banca Geral'],
+  ['chartMetaLucroDiariaGeral','Meta Diária vs Realizado (Geral)'],
   ['chartTADiariaGeral','TA Diária vs Meta (Geral)'],
   ['chartTAMensalGeral','TA Mensal — Fechamento vs Meta (Geral)'],
   ['chartCompararLucro','Esportiva vs Opções Binárias — Lucro'],
@@ -3446,6 +3575,8 @@ function renderAll(){
     ...DB.movimentacoes.filter(m=>inGlobalDateRange(m.data)).map(m=>({data:m.data, delta:movDelta(m)}))
   ];
   renderEvolChart('chartEvolGeral', round2(es.inicial+ob.inicial), eventsGeral, COLOR_RED);
+  renderMetaLucroCard('metaLucroGeral', 'geral');
+  renderMetaLucroDiariaChart('chartMetaLucroDiariaGeral', eventsGeral, Number(DB.metaLucroGeralDia)||0);
   const taEntriesGeral = combinedTAEntries(globalApostas(), globalBinarias());
   renderTAChart('chartTADiariaGeral', taEntriesGeral, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalGeral', taEntriesGeral, 'aposta', DB.metaTA);
@@ -4603,6 +4734,16 @@ document.getElementById('metaEditor').addEventListener('change', e=>{
     saveDB(); renderAll();
   }
 });
+
+function metaLucroInputHandler(e){
+  if(!e.target.classList.contains('metaLucroInput')) return;
+  const key = e.target.dataset.key;
+  DB[key] = Math.max(0, parseFloat(e.target.value)||0);
+  saveDB(); renderAll();
+}
+document.getElementById('metaLucroEsportiva').addEventListener('change', metaLucroInputHandler);
+document.getElementById('metaLucroOB').addEventListener('change', metaLucroInputHandler);
+document.getElementById('metaLucroGeral').addEventListener('change', metaLucroInputHandler);
 
 document.getElementById('btnToggleValues').textContent = valuesHidden ? '🙈 Exibir valores' : '👁️ Ocultar valores';
 document.getElementById('btnToggleValues').addEventListener('click', ()=>{
