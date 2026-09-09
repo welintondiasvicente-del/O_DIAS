@@ -1168,6 +1168,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
             <option value="🏀 Basquete">🏀 Basquete</option>
             <option value="🎾 Tênis">🎾 Tênis</option>
             <option value="🏒 Hóquei">🏒 Hóquei</option>
+            <option value="🏈 F. Americano">🏈 F. Americano</option>
           </select>
           <select id="legTipo">
             <option value="Estatística de Jogo">Estatística de Jogo</option>
@@ -2375,7 +2376,7 @@ function renderFilterPanel(containerId, kind){
       <div class="filter-field"><label>Status (OB)</label><select multiple id="fGlbStatusOB"></select></div>
       <div class="filter-actions"><button class="btn btn-sm" id="fGlbLimpar">Limpar filtros</button></div>
     `;
-    buildMultiOptions(document.getElementById('fGlbEsporte'), ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei'].map(v=>({value:v,label:v})), filters.global.esporte);
+    buildMultiOptions(document.getElementById('fGlbEsporte'), ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei','🏈 F. Americano'].map(v=>({value:v,label:v})), filters.global.esporte);
     buildMultiOptions(document.getElementById('fGlbTipoAposta'), ['Estatística de Jogo','Estatística de Jogador','Estatística de Equipe Individual'].map(v=>({value:v,label:v})), filters.global.tipoAposta);
     buildMultiOptions(document.getElementById('fGlbCasa'), DB.casas.map(c=>({value:c.id,label:c.nome})), filters.global.casa);
     buildMultiOptions(document.getElementById('fGlbStatusEsp'), ['Green','Red','Reembolso','Pendente'].map(v=>({value:v,label:v})), filters.global.statusEsp);
@@ -2408,7 +2409,7 @@ function renderFilterPanel(containerId, kind){
       <div class="filter-field"><label>Origem</label><select multiple id="fEspValorTipo"></select></div>
       <div class="filter-actions"><button class="btn btn-sm" id="fEspLimpar">Limpar filtros</button></div>
     `;
-    buildMultiOptions(document.getElementById('fEspEsporte'), ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei'].map(v=>({value:v,label:v})), filters.esportiva.esporte);
+    buildMultiOptions(document.getElementById('fEspEsporte'), ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei','🏈 F. Americano'].map(v=>({value:v,label:v})), filters.esportiva.esporte);
     buildMultiOptions(document.getElementById('fEspTipoAposta'), ['Estatística de Jogo','Estatística de Jogador','Estatística de Equipe Individual'].map(v=>({value:v,label:v})), filters.esportiva.tipoAposta);
     buildMultiOptions(document.getElementById('fEspCasa'), DB.casas.map(c=>({value:c.id,label:c.nome})), filters.esportiva.casa);
     buildMultiOptions(document.getElementById('fEspStatus'), ['Green','Red','Reembolso','Pendente'].map(v=>({value:v,label:v})), filters.esportiva.status);
@@ -4006,7 +4007,7 @@ function renderMercadoStaging(){
   });
 }
 
-const LEG_ESPORTE_OPTIONS = ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei'];
+const LEG_ESPORTE_OPTIONS = ['⚽ Futebol','🏀 Basquete','🎾 Tênis','🏒 Hóquei','🏈 F. Americano'];
 function renderLegList(){
   const el = document.getElementById('legList');
   if(currentLegs.length===0){
