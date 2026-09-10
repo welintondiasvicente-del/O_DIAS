@@ -1,10 +1,10 @@
-const CACHE_NAME = 'o-dias-v13';
+const CACHE_NAME = 'o-dias-v14';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './icone-192.png',
-  './icone-512.png'
+  './ícone-192.png',
+  './ícone-512.png'
 ];
 
 self.addEventListener('install', (event) => {

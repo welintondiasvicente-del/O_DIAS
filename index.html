@@ -1,22 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0f0f0f">
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js');
-  });
-}
-</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>O DIAS — Gerenciador de Banca</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#140505">
-<link rel="icon" href="icone-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
@@ -781,6 +772,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
       <h4>Meta Diária vs Realizado (Geral)</h4>
       <div class="chart-wrap"><canvas id="chartMetaLucroDiariaGeral"></canvas></div>
       <div class="helper-text">Cada barra é o lucro líquido daquele dia (Esportiva + OB somados). Verde forte = meta batida naquele dia. A linha tracejada é a sua meta diária.</div>
+      <div class="helper-text" id="metaHitGeral" style="margin-top:6px;"></div>
     </div>
 
     <div class="section-title">Visão Geral<div class="rule"></div>
@@ -838,6 +830,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
     <div class="chart-card" style="margin-bottom:18px;">
       <h4>Lucro Diário (Esportiva)</h4>
       <div class="chart-wrap"><canvas id="chartLucroDiarioEsportiva"></canvas></div>
+      <div class="helper-text" id="metaHitEsportiva"></div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
@@ -940,6 +933,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
     <div class="chart-card" style="margin-bottom:18px;">
       <h4>Lucro Diário (OB)</h4>
       <div class="chart-wrap"><canvas id="chartLucroDiarioOB"></canvas></div>
+      <div class="helper-text" id="metaHitOB"></div>
     </div>
     <div class="charts-grid two-even">
       <div class="chart-card">
@@ -2000,6 +1994,20 @@ function renderLucroDiarioChart(canvasId, events){
   const labels = dias.map(fmtDate);
   const values = dias.map(d=>porDia[d]);
   renderBarProfit(canvasId, labels, values);
+}
+// Texto "meta batida em X de Y dias" pra acompanhar os gráficos de lucro diário.
+function metaHitStatsHtml(events, metaValue){
+  const porDia = {};
+  events.forEach(ev=>{
+    if(!ev.data) return;
+    porDia[ev.data] = round2((porDia[ev.data]||0) + ev.delta);
+  });
+  const dias = Object.keys(porDia);
+  if(!dias.length) return 'Sem dias registrados ainda.';
+  if(!(metaValue>0)) return 'Defina uma meta de lucro diária acima pra ver quantos dias você bateu.';
+  const hits = dias.filter(d=>porDia[d]>=metaValue).length;
+  const pct = dias.length ? round2(hits/dias.length*100) : 0;
+  return '🎯 Meta batida em <b style="color:var(--white);">'+hits+' de '+dias.length+'</b> dias com registro ('+pct.toFixed(0)+'%).';
 }
 // Igual ao de cima, mas colore mais forte quando o dia bateu a meta e desenha
 // uma linha tracejada com o valor da meta, pro usuário comparar dia a dia.
@@ -3471,14 +3479,14 @@ const REPORT_CHART_LIST = [
   ['chartResultadosGeral','Distribuição de Resultados (Geral)'],
   ['chartEvolEsportiva','Evolução da Banca (Esportiva)'],
   ['chartTADiariaEsportiva','TA Diária vs Meta (Esportiva)'],
-  ['chartLucroDiarioEsportiva','Lucro Diário (Esportiva)'],
+  ['chartLucroDiarioEsportiva','Lucro Diário vs Meta (Esportiva)'],
   ['chartTAMensalEsportiva','TA Mensal — Esportiva'],
   ['chartStatusEsportiva','Green / Red / Reembolso'],
   ['chartMomento','Green vs Red por Tipo de Aposta (Pré-live/Live)'],
   ['chartBilhete','Lucro por Bilhete'],
   ['chartEvolOB','Evolução da Banca (OB)'],
   ['chartTADiariaOB','TA Diária vs Meta (OB)'],
-  ['chartLucroDiarioOB','Lucro Diário (OB)'],
+  ['chartLucroDiarioOB','Lucro Diário vs Meta (OB)'],
   ['chartTAMensalOB','TA Mensal — OB'],
   ['chartPlataforma','Lucro por Plataforma'],
   ['chartEstrategiaOB','Lucro por Estratégia (OB)'],
@@ -3600,7 +3608,9 @@ function renderAll(){
   ];
   renderEvolChart('chartEvolGeral', round2(es.inicial+ob.inicial), eventsGeral, COLOR_RED);
   renderMetaLucroCard('metaLucroGeral', 'geral');
-  renderMetaLucroDiariaChart('chartMetaLucroDiariaGeral', eventsGeral, Number(DB.metaLucroGeralDia)||0);
+  const metaGeralAuto = round2((Number(DB.metaLucroEsportivaDia)||0) + (Number(DB.metaLucroOBDia)||0));
+  renderMetaLucroDiariaChart('chartMetaLucroDiariaGeral', eventsGeral, metaGeralAuto);
+  document.getElementById('metaHitGeral').innerHTML = metaHitStatsHtml(eventsGeral, metaGeralAuto);
   const taEntriesGeral = combinedTAEntries(globalApostas(), globalBinarias());
   renderTAChart('chartTADiariaGeral', taEntriesGeral, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalGeral', taEntriesGeral, 'aposta', DB.metaTA);
@@ -3620,7 +3630,8 @@ function renderAll(){
     ...DB.movimentacoes.filter(m=>m.tipoDestino==='casa').map(m=>({data:m.data, delta:movDelta(m)}))
   ];
   renderEvolChart('chartEvolEsportiva', round2(es.inicial), eventsEsp, COLOR_WHITE);
-  renderLucroDiarioChart('chartLucroDiarioEsportiva', eventsEsp);
+  renderMetaLucroDiariaChart('chartLucroDiarioEsportiva', eventsEsp, Number(DB.metaLucroEsportivaDia)||0);
+  document.getElementById('metaHitEsportiva').innerHTML = metaHitStatsHtml(eventsEsp, Number(DB.metaLucroEsportivaDia)||0);
   renderTAChart('chartTADiariaEsportiva', listEsp, 'aposta', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalEsportiva', listEsp, 'aposta', DB.metaTA);
   const gcEsporte = greenRedCountsByLeg(listEsp, l=>l.esporte);
@@ -3653,7 +3664,8 @@ function renderAll(){
     ...DB.movimentacoes.filter(m=>m.tipoDestino==='plataforma').map(m=>({data:m.data, delta:movDelta(m)}))
   ];
   renderEvolChart('chartEvolOB', round2(ob.inicial), eventsOB, COLOR_WHITE);
-  renderLucroDiarioChart('chartLucroDiarioOB', eventsOB);
+  renderMetaLucroDiariaChart('chartLucroDiarioOB', eventsOB, Number(DB.metaLucroOBDia)||0);
+  document.getElementById('metaHitOB').innerHTML = metaHitStatsHtml(eventsOB, Number(DB.metaLucroOBDia)||0);
   renderTAChart('chartTADiariaOB', listOB, 'binaria', DB.metaTA);
   renderTAMonthlyChart('chartTAMensalOB', listOB, 'binaria', DB.metaTA);
   const byPlat = {};
