@@ -3568,7 +3568,17 @@ function buildPrintReport(images){
 /* ============================================================
    FULL RENDER
 ============================================================ */
+function sortDBLists(){
+  const byNome = (a,b)=> String(a.nome||'').localeCompare(String(b.nome||''), 'pt-BR', {sensitivity:'base'});
+  DB.casas.sort(byNome);
+  DB.plataformas.sort(byNome);
+  DB.mercadosGerais.sort(byNome);
+  DB.mercadosApostas.sort(byNome);
+  DB.campeonatos.sort(byNome);
+  DB.estrategias.sort(byNome);
+}
 function renderAll(){
+  sortDBLists();
   renderMetaHero();
   renderMetaEditor();
   updatePendentesButton();

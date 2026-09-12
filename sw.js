@@ -1,4 +1,4 @@
-const CACHE_NAME = 'o-dias-v14';
+const CACHE_NAME = 'o-dias-v15';
 const APP_SHELL = [
   './',
   './index.html',
