@@ -772,7 +772,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
     <div class="chart-card" style="margin-bottom:18px;">
       <h4>Meta Diária vs Realizado (Geral)</h4>
       <div class="chart-wrap"><canvas id="chartMetaLucroDiariaGeral"></canvas></div>
-      <div class="helper-text">Cada barra é o lucro líquido daquele dia (Esportiva + OB somados). Verde forte = meta batida naquele dia. A linha tracejada é a sua meta diária.</div>
+      <div class="helper-text">Cada barra é o lucro líquido daquele dia (Esportiva + OB + Bônus somados). Verde forte = meta batida naquele dia. A linha tracejada é a sua meta diária.</div>
       <div class="helper-text" id="metaHitGeral" style="margin-top:6px;"></div>
     </div>
 
@@ -801,7 +801,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
         <div class="helper-text">* mês em andamento (ainda não fechado)</div>
       </div>
       <div class="chart-card">
-        <h4>Esportiva vs Opções Binárias — Lucro</h4>
+        <h4>Esportiva vs Opções Binárias vs Bônus — Lucro</h4>
         <div class="chart-wrap"><canvas id="chartCompararLucro"></canvas></div>
       </div>
     </div>
@@ -2677,6 +2677,9 @@ function renderMetaLucroCard(containerId, tipo){
   if(tipo==='ob' || tipo==='geral'){
     DB.binarias.forEach(b=>{ if(b.data===hoje) lucroHoje += profitBinaria(b); });
   }
+  if(tipo==='geral'){
+    DB.bonus.forEach(b=>{ if(b.tipoBonus==='Giros Grátis' && b.data===hoje) lucroHoje += Number(b.valorGanho||0); });
+  }
   lucroHoje = round2(lucroHoje);
 
   let badgeHtml = '', barPct = 0, barColor = 'var(--line2)', showBar = (meta>0 || stop>0);
@@ -2722,7 +2725,7 @@ function renderMetaLucroCard(containerId, tipo){
       </div>`;
 
   el.innerHTML = `
-    <div class="meta-lucro-title">🎯 Meta de Lucro Diária (${tipo==='esportiva'?'Apostas Esportivas':tipo==='ob'?'Opções Binárias':'Geral — Esportiva + OB'})</div>
+    <div class="meta-lucro-title">🎯 Meta de Lucro Diária (${tipo==='esportiva'?'Apostas Esportivas':tipo==='ob'?'Opções Binárias':'Geral — Esportiva + OB + Bônus'})</div>
     ${inputsOrSummary}
     ${showBar ? `<div class="meta-lucro-bar"><div class="meta-lucro-bar-fill" style="width:${barPct}%;background:${barColor};"></div></div>` : ''}
     ${badgeHtml}
@@ -2730,7 +2733,7 @@ function renderMetaLucroCard(containerId, tipo){
 }
 
 function tituloTipoMeta(tipo){
-  return tipo==='esportiva' ? 'Apostas Esportivas' : tipo==='ob' ? 'Opções Binárias' : 'Geral — Esportiva + OB';
+  return tipo==='esportiva' ? 'Apostas Esportivas' : tipo==='ob' ? 'Opções Binárias' : 'Geral — Esportiva + OB + Bônus';
 }
 const NOMES_MES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -2763,6 +2766,9 @@ function renderMetaMensalCard(containerId, tipo){
   }
   if(tipo==='ob' || tipo==='geral'){
     DB.binarias.forEach(b=>{ if((b.data||'').startsWith(mesPrefix)) lucroMes += profitBinaria(b); });
+  }
+  if(tipo==='geral'){
+    DB.bonus.forEach(b=>{ if(b.tipoBonus==='Giros Grátis' && (b.data||'').startsWith(mesPrefix)) lucroMes += Number(b.valorGanho||0); });
   }
   lucroMes = round2(lucroMes);
 
@@ -3541,7 +3547,7 @@ const REPORT_CHART_LIST = [
   ['chartMetaLucroDiariaGeral','Meta Diária vs Realizado (Geral)'],
   ['chartTADiariaGeral','TA Diária vs Meta (Geral)'],
   ['chartTAMensalGeral','TA Mensal — Fechamento vs Meta (Geral)'],
-  ['chartCompararLucro','Esportiva vs Opções Binárias — Lucro'],
+  ['chartCompararLucro','Esportiva vs Opções Binárias vs Bônus — Lucro'],
   ['chartResultadosGeral','Distribuição de Resultados (Geral)'],
   ['chartEvolEsportiva','Evolução da Banca (Esportiva)'],
   ['chartTADiariaEsportiva','TA Diária vs Meta (Esportiva)'],
@@ -3693,7 +3699,8 @@ function renderAll(){
   renderTAMonthlyChart('chartTAMensalGeral', taEntriesGeral, 'aposta', DB.metaTA);
   const lucroEspFiltrado = round2(globalApostas().reduce((s,a)=>s+profitAposta(a),0));
   const lucroObFiltrado = round2(globalBinarias().reduce((s,b)=>s+profitBinaria(b),0));
-  renderBarProfit('chartCompararLucro', ['Esportiva','Opções Binárias'], [lucroEspFiltrado, lucroObFiltrado]);
+  const lucroBonusFiltrado = round2(DB.bonus.filter(b=>b.tipoBonus==='Giros Grátis' && inGlobalDateRange(b.data)).reduce((s,b)=>s+Number(b.valorGanho||0),0));
+  renderBarProfit('chartCompararLucro', ['Esportiva','Opções Binárias','Bônus'], [lucroEspFiltrado, lucroObFiltrado, lucroBonusFiltrado]);
   const gCounts = { win: globalApostas().filter(a=>a.status==='Green').length + globalBinarias().filter(b=>b.status==='GAIN').length,
     loss: globalApostas().filter(a=>a.status==='Red').length + globalBinarias().filter(b=>b.status==='LOSS').length,
     push: globalApostas().filter(a=>a.status==='Reembolso').length + globalBinarias().filter(b=>b.status==='REEMBOLSO').length };
