@@ -768,6 +768,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
     <div id="metaHero"></div>
 
     <div class="meta-lucro-card" id="metaLucroGeral"></div>
+    <div class="meta-lucro-card" id="metaMensalGeral"></div>
     <div class="chart-card" style="margin-bottom:18px;">
       <h4>Meta Diária vs Realizado (Geral)</h4>
       <div class="chart-wrap"><canvas id="chartMetaLucroDiariaGeral"></canvas></div>
@@ -816,6 +817,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
     <div class="kpi-grid" id="kpiEsportiva"></div>
 
     <div class="meta-lucro-card" id="metaLucroEsportiva"></div>
+    <div class="meta-lucro-card" id="metaMensalEsportiva"></div>
 
     <div class="charts-grid">
       <div class="chart-card">
@@ -919,6 +921,7 @@ body.modal-lock{overflow:hidden;position:fixed;inset:0;width:100%;}
     <div class="kpi-grid" id="kpiOB"></div>
 
     <div class="meta-lucro-card" id="metaLucroOB"></div>
+    <div class="meta-lucro-card" id="metaMensalOB"></div>
 
     <div class="charts-grid">
       <div class="chart-card">
@@ -2726,6 +2729,67 @@ function renderMetaLucroCard(containerId, tipo){
   `;
 }
 
+function tituloTipoMeta(tipo){
+  return tipo==='esportiva' ? 'Apostas Esportivas' : tipo==='ob' ? 'Opções Binárias' : 'Geral — Esportiva + OB';
+}
+const NOMES_MES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// Meta mensal = meta diária × quantidade de dias do mês corrente. Acompanha o
+// lucro acumulado no mês e recalcula a média diária necessária pro resto do mês.
+function renderMetaMensalCard(containerId, tipo){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const metaEsp = Number(DB.metaLucroEsportivaDia)||0, metaOB = Number(DB.metaLucroOBDia)||0;
+  const metaDiaria = tipo==='esportiva' ? metaEsp : tipo==='ob' ? metaOB : round2(metaEsp+metaOB);
+
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const diaAtual = now.getDate();
+  const diasRestantes = Math.max(0, daysInMonth - diaAtual);
+  const mesPrefix = todayStr().slice(0,7);
+  const labelMes = NOMES_MES_PT[now.getMonth()]+'/'+now.getFullYear();
+
+  if(!(metaDiaria>0)){
+    el.innerHTML = `
+      <div class="meta-lucro-title">📅 Meta Mensal (${tituloTipoMeta(tipo)}) — ${labelMes}</div>
+      <div class="meta-lucro-empty">Defina uma meta de lucro diária ${tipo==='geral' ? 'nas abas Apostas Esportivas e/ou Opções Binárias' : 'acima'} pra calcular sua meta do mês automaticamente (meta diária × ${daysInMonth} dias do mês).</div>
+    `;
+    return;
+  }
+
+  let lucroMes = 0;
+  if(tipo==='esportiva' || tipo==='geral'){
+    DB.apostas.forEach(a=>{ if((a.data||'').startsWith(mesPrefix)) lucroMes += profitAposta(a); });
+  }
+  if(tipo==='ob' || tipo==='geral'){
+    DB.binarias.forEach(b=>{ if((b.data||'').startsWith(mesPrefix)) lucroMes += profitBinaria(b); });
+  }
+  lucroMes = round2(lucroMes);
+
+  const metaMes = round2(metaDiaria * daysInMonth);
+  const pct = metaMes>0 ? Math.max(0, Math.min(100, lucroMes/metaMes*100)) : 0;
+  const bateu = lucroMes >= metaMes;
+  const falta = round2(metaMes - lucroMes);
+  const mediaNecessaria = (!bateu && diasRestantes>0) ? round2(falta/diasRestantes) : null;
+
+  let statusHtml;
+  if(bateu){
+    statusHtml = '<div class="meta-lucro-badge hit">✅ Meta do mês batida! Lucro de '+maskMoney(fmtBRL(lucroMes))+' (meta era '+maskMoney(fmtBRL(metaMes))+')</div>';
+  } else if(diasRestantes===0){
+    statusHtml = '<div class="meta-lucro-badge warn">📌 Hoje é o último dia do mês — ainda faltam '+maskMoney(fmtBRL(falta))+' pra bater a meta mensal.</div>';
+  } else {
+    statusHtml = '<div class="meta-lucro-badge progress">🟡 Faltam '+maskMoney(fmtBRL(falta))+' pra bater a meta do mês — precisa de, em média, <b>'+maskMoney(fmtBRL(mediaNecessaria))+'/dia</b> nos próximos '+diasRestantes+' dias.</div>';
+  }
+
+  el.innerHTML = `
+    <div class="meta-lucro-title">📅 Meta Mensal (${tituloTipoMeta(tipo)}) — ${labelMes}</div>
+    <div class="meta-lucro-readonly-sub" style="margin-bottom:8px;">Meta do mês: <b style="color:var(--white);font-family:var(--font-display);">${maskMoney(fmtBRL(metaMes))}</b> (meta diária ${maskMoney(fmtBRL(metaDiaria))} × ${daysInMonth} dias)</div>
+    <div class="meta-lucro-bar"><div class="meta-lucro-bar-fill" style="width:${pct}%;background:${bateu?'var(--green)':'var(--amber)'};"></div></div>
+    <div class="meta-lucro-readonly-sub" style="margin-bottom:10px;">${maskMoney(fmtBRL(lucroMes))} de ${maskMoney(fmtBRL(metaMes))} (${pct.toFixed(0)}%)</div>
+    ${statusHtml}
+  `;
+}
+
 let valuesHidden = localStorage.getItem('odias_hide_values')==='1';
 function maskMoney(str){ return valuesHidden ? '••••••' : str; }
 
@@ -2820,6 +2884,7 @@ function renderKPIEsportiva(){
     kpiCard('TA (filtro)', ta.toFixed(1)+'%', c.win+'G · '+c.loss+'R · '+c.push+'Reemb. · '+c.pending+'Pend.')
   ].join('');
   renderMetaLucroCard('metaLucroEsportiva', 'esportiva');
+  renderMetaMensalCard('metaMensalEsportiva', 'esportiva');
 }
 
 function renderKPIOB(){
@@ -2840,6 +2905,7 @@ function renderKPIOB(){
     kpiCard('TA (filtro)', ta.toFixed(1)+'%', c.win+'GAIN · '+c.loss+'LOSS · '+c.push+'Reemb.')
   ].join('');
   renderMetaLucroCard('metaLucroOB', 'ob');
+  renderMetaMensalCard('metaMensalOB', 'ob');
 }
 
 function renderKPIBonus(){
@@ -3618,6 +3684,7 @@ function renderAll(){
   ];
   renderEvolChart('chartEvolGeral', round2(es.inicial+ob.inicial), eventsGeral, COLOR_RED);
   renderMetaLucroCard('metaLucroGeral', 'geral');
+  renderMetaMensalCard('metaMensalGeral', 'geral');
   const metaGeralAuto = round2((Number(DB.metaLucroEsportivaDia)||0) + (Number(DB.metaLucroOBDia)||0));
   renderMetaLucroDiariaChart('chartMetaLucroDiariaGeral', eventsGeral, metaGeralAuto);
   document.getElementById('metaHitGeral').innerHTML = metaHitStatsHtml(eventsGeral, metaGeralAuto);
