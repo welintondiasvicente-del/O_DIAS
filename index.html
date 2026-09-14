@@ -2681,6 +2681,7 @@ let metaCollapsed = {};
 try{ metaCollapsed = JSON.parse(localStorage.getItem('odias_meta_collapsed'))||{}; }catch(e){ metaCollapsed = {}; }
 function saveMetaCollapsed(){ localStorage.setItem('odias_meta_collapsed', JSON.stringify(metaCollapsed)); }
 function toggleMetaCollapsed(id){ metaCollapsed[id] = !metaCollapsed[id]; saveMetaCollapsed(); renderAll(); }
+window.toggleMetaCollapsed = toggleMetaCollapsed;
 function metaToggleBtn(id){
   const isCollapsed = !!metaCollapsed[id];
   return `<button type="button" class="meta-toggle-btn" onclick="toggleMetaCollapsed('${id}')">${isCollapsed ? '👁️ Exibir' : '🙈 Ocultar'}</button>`;
